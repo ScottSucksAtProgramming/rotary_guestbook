@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import yaml
 
-from src.audioGuestBook import AudioGuestBook, CurrentEvent
+from audioGuestBook import AudioGuestBook, CurrentEvent
 
 
 @pytest.fixture
@@ -44,7 +44,7 @@ def mock_config():
 @pytest.fixture
 def mock_audio_interface():
     """Create a mock AudioInterface instance."""
-    with patch("src.audioGuestBook.AudioInterface") as mock:
+    with patch("audioGuestBook.AudioInterface") as mock:
         instance = mock.return_value
         instance.play_audio = MagicMock()
         instance.start_recording = MagicMock()
@@ -56,7 +56,7 @@ def mock_audio_interface():
 @pytest.fixture
 def mock_button():
     """Create a mock Button instance."""
-    with patch("src.audioGuestBook.Button") as mock:
+    with patch("audioGuestBook.Button") as mock:
         instance = mock.return_value
         instance.when_pressed = None
         instance.when_released = None
@@ -72,8 +72,8 @@ def guest_book(mock_config, tmp_path):
         yaml.dump(mock_config, f)
 
     with (
-        patch("src.audioGuestBook.AudioInterface"),
-        patch("src.audioGuestBook.Button"),
+        patch("audioGuestBook.AudioInterface"),
+        patch("audioGuestBook.Button"),
     ):
         return AudioGuestBook(str(config_path))
 

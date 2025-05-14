@@ -1,11 +1,10 @@
-import os
 import signal
 import subprocess
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.audioInterface import AudioInterface
+from audioInterface import AudioInterface
 
 
 @pytest.fixture
