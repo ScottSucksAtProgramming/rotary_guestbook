@@ -266,7 +266,7 @@ class AudioGuestBook:
         if shutdown_gpio == 0:
             logger.info("no shutdown button declared, skipping button init")
             return
-        hold_time = self.config["shutdown_button_hold_time"] == 2
+        hold_time = self.config["shutdown_button_hold_time"]
         self.shutdown_button = Button(shutdown_gpio, pull_up=True, hold_time=hold_time)
         self.shutdown_button.when_held = self.shutdown
 

@@ -38,9 +38,7 @@ logger.info(f"Base directory: {BASE_DIR}")
 logger.info(f"Static directory: {STATIC_DIR}")
 
 # Create Flask app with absolute path to static folder
-app = Flask(__name__,
-           static_url_path="/static",
-           static_folder=str(STATIC_DIR))
+app = Flask(__name__, static_url_path="/static", static_folder=str(STATIC_DIR))
 app.secret_key = "supersecretkey"  # Needed for flashing messages
 
 # Define other important paths
@@ -88,6 +86,7 @@ elif not recordings_path.is_dir():
 else:
     logger.info(f"Recordings directory verified: {recordings_path}")
 
+
 def normalize_path(path):
     """Normalize and convert paths to Unix format."""
     return str(path.as_posix())
@@ -112,9 +111,10 @@ def delete_file(filename):
         file_path.unlink()
         return jsonify({"success": True, "message": f"{filename} has been deleted."})
     except Exception as e:
-        return jsonify(
-            {"success": False, "message": f"Error deleting file: {str(e)}"}
-        ), 500
+        return (
+            jsonify({"success": False, "message": f"Error deleting file: {str(e)}"}),
+            500,
+        )
 
 
 @app.route("/api/recordings")
@@ -167,12 +167,21 @@ def edit_config():
 
             # Restart the audioGuestBook service to apply changes
             try:
-                subprocess.run(["sudo", "systemctl", "restart", "audioGuestBook.service"], check=True)
+                subprocess.run(
+                    ["sudo", "systemctl", "restart", "audioGuestBook.service"],
+                    check=True,
+                )
                 logger.info("Successfully restarted audioGuestBook service")
-                flash("Configuration updated and service restarted successfully!", "success")
+                flash(
+                    "Configuration updated and service restarted successfully!",
+                    "success",
+                )
             except subprocess.CalledProcessError as e:
                 logger.error(f"Failed to restart audioGuestBook service: {e}")
-                flash("Configuration updated but failed to restart service. Please restart manually.", "warning")
+                flash(
+                    "Configuration updated but failed to restart service. Please restart manually.",
+                    "warning",
+                )
 
             return redirect(url_for("edit_config"))
         except Exception as e:
@@ -205,12 +214,12 @@ def serve_recording(filename):
     file_size = file_path.stat().st_size
 
     # Parse Range header
-    range_header = request.headers.get('Range', None)
+    range_header = request.headers.get("Range", None)
 
     if range_header:
         # Parse the range header
         byte1, byte2 = 0, None
-        match = re.search(r'(\d+)-(\d*)', range_header)
+        match = re.search(r"(\d+)-(\d*)", range_header)
         groups = match.groups()
 
         if groups[0]:
@@ -227,28 +236,27 @@ def serve_recording(filename):
         resp = Response(
             generate_file_chunks(str(file_path), byte1, byte2),
             status=206,
-            mimetype='audio/wav',
-            direct_passthrough=True
+            mimetype="audio/wav",
+            direct_passthrough=True,
         )
 
-        resp.headers.add('Content-Range', f'bytes {byte1}-{byte2}/{file_size}')
-        resp.headers.add('Accept-Ranges', 'bytes')
-        resp.headers.add('Content-Length', str(length))
+        resp.headers.add("Content-Range", f"bytes {byte1}-{byte2}/{file_size}")
+        resp.headers.add("Accept-Ranges", "bytes")
+        resp.headers.add("Content-Length", str(length))
         return resp
 
     # If no range header, serve the whole file
     resp = Response(
-        generate_file_chunks(str(file_path), 0, file_size - 1),
-        mimetype='audio/wav'
+        generate_file_chunks(str(file_path), 0, file_size - 1), mimetype="audio/wav"
     )
-    resp.headers.add('Accept-Ranges', 'bytes')
-    resp.headers.add('Content-Length', str(file_size))
+    resp.headers.add("Accept-Ranges", "bytes")
+    resp.headers.add("Content-Length", str(file_size))
     return resp
 
 
 def generate_file_chunks(file_path, byte1=0, byte2=None):
     """Generator to stream file in chunks with range support."""
-    with open(file_path, 'rb') as f:
+    with open(file_path, "rb") as f:
         f.seek(byte1)
         while True:
             buffer_size = 8192
@@ -267,7 +275,11 @@ def download_all():
     """Download all recordings as a zip file."""
     memory_file = io.BytesIO()
     with zipfile.ZipFile(memory_file, "w") as zf:
-        wav_files = [f for f in recordings_path.iterdir() if f.is_file() and f.suffix.lower() == ".wav"]
+        wav_files = [
+            f
+            for f in recordings_path.iterdir()
+            if f.is_file() and f.suffix.lower() == ".wav"
+        ]
 
         # Log the files being added to the zip
         logger.info(f"Adding {len(wav_files)} files to zip")
@@ -345,9 +357,10 @@ def reboot():
         return jsonify({"success": True, "message": "System is rebooting..."})
     except Exception as e:
         logger.error(f"Failed to reboot: {e}")
-        return jsonify(
-            {"success": False, "message": "Failed to reboot the system!"}
-        ), 500
+        return (
+            jsonify({"success": False, "message": "Failed to reboot the system!"}),
+            500,
+        )
 
 
 @app.route("/shutdown", methods=["POST"])
@@ -358,31 +371,34 @@ def shutdown():
         return jsonify({"success": True, "message": "System is shutting down..."})
     except Exception as e:
         logger.error(f"Failed to shut down: {e}")
-        return jsonify(
-            {"success": False, "message": "Failed to shut down the system!"}
-        ), 500
+        return (
+            jsonify({"success": False, "message": "Failed to shut down the system!"}),
+            500,
+        )
 
 
 def update_config(form_data):
     """Update the YAML configuration with form data."""
     for key, value in form_data.items():
         # Skip CSRF token if it exists
-        if key == 'csrf_token':
+        if key == "csrf_token":
             continue
 
         # Check if key exists in config
-        if key not in config and key != 'invert_hook':
+        if key not in config and key != "invert_hook":
             logger.warning(f"Form field '{key}' not found in config, skipping")
             continue
 
         # Log the conversion attempt
-        logger.info(f"Updating '{key}': {config.get(key, 'Not set')} (type: {type(config.get(key, '')).__name__}) → '{value}'")
+        logger.info(
+            f"Updating '{key}': {config.get(key, 'Not set')} (type: {type(config.get(key, '')).__name__}) → '{value}'"
+        )
 
         try:
             # Convert value based on the type in config or for new boolean fields
-            if key == 'invert_hook' or isinstance(config.get(key), bool):
+            if key == "invert_hook" or isinstance(config.get(key), bool):
                 # Convert string to boolean
-                new_value = (value.lower() == "true")
+                new_value = value.lower() == "true"
                 logger.info(f"Converting to boolean: {value} → {new_value}")
                 config[key] = new_value
             elif isinstance(config.get(key), int):
@@ -393,10 +409,13 @@ def update_config(form_data):
                 config[key] = value
 
             # Verify the conversion worked
-            logger.info(f"Updated '{key}' to: {config[key]} (type: {type(config[key]).__name__})")
+            logger.info(
+                f"Updated '{key}' to: {config[key]} (type: {type(config[key]).__name__})"
+            )
 
         except (ValueError, TypeError) as e:
             logger.error(f"Failed to update '{key}': {e}")
+
 
 @app.route("/api/system-status")
 def system_status():

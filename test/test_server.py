@@ -1,13 +1,22 @@
-import os
 import sys
 from pathlib import Path
 import logging
 
+from flask import (
+    Flask,
+    Response,
+    render_template,
+    redirect,
+    request,
+    url_for,
+    jsonify,
+    flash,
+    send_file,
+)
+from ruamel.yaml import YAML
+
 # Add the parent directory to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
-
-from flask import Flask, Response, render_template, redirect, request, url_for, jsonify, flash, send_file
-from ruamel.yaml import YAML
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -49,16 +58,20 @@ print(f"Using templates from: {TEMPLATES_DIR}")
 # Check for CSS files
 CSS_FILE = PROJECT_ROOT / "static" / "css" / "output.min.css"
 if not CSS_FILE.exists():
-    print(f"WARNING: {CSS_FILE} not found! Tailwind CSS might not be properly compiled.")
+    print(
+        f"WARNING: {CSS_FILE} not found! Tailwind CSS might not be properly compiled."
+    )
     print("Run these commands in your project root:")
     print("  npx tailwindcss build -i static/css/tailwind.css -o static/css/output.css")
     print("  npx postcss static/css/output.css > static/css/output.min.css")
 
 # Create Flask app
-app = Flask(__name__, 
-            static_url_path="/static",
-            static_folder=str(PROJECT_ROOT / "static"),
-            template_folder=str(TEMPLATES_DIR))
+app = Flask(
+    __name__,
+    static_url_path="/static",
+    static_folder=str(PROJECT_ROOT / "static"),
+    template_folder=str(TEMPLATES_DIR),
+)
 app.secret_key = "supersecretkey"
 
 # Load or create test configuration
@@ -104,9 +117,11 @@ with open(config_file, "r") as f:
 
 recordings_path = Path(config["recordings_path"])
 
+
 def normalize_path(path):
     """Normalize and convert paths to Unix format."""
     return str(Path(path).as_posix())
+
 
 def update_config(form_data):
     """Update the YAML configuration with form data."""
@@ -121,15 +136,18 @@ def update_config(form_data):
             else:
                 config[key] = value
 
+
 # Define all routes from your production server
 @app.route("/")
 def index():
     return render_template("index.html")
 
+
 @app.route("/<filename>", methods=["GET"])
 def download_file(filename):
     """Download a file dynamically from the recordings folder."""
     return send_file(str(recordings_path / filename), as_attachment=True)
+
 
 @app.route("/delete/<filename>", methods=["POST"])
 def delete_file(filename):
@@ -139,15 +157,18 @@ def delete_file(filename):
         file_path.unlink()
         return jsonify({"success": True, "message": f"{filename} has been deleted."})
     except Exception as e:
-        return jsonify(
-            {"success": False, "message": f"Error deleting file: {str(e)}"}
-        ), 500
+        return (
+            jsonify({"success": False, "message": f"Error deleting file: {str(e)}"}),
+            500,
+        )
+
 
 @app.route("/api/recordings")
 def get_recordings():
     """API route to get a list of all recordings."""
     files = [f.name for f in recordings_path.iterdir() if f.is_file()]
     return jsonify(files)
+
 
 @app.route("/config", methods=["GET", "POST"])
 def edit_config():
@@ -172,9 +193,11 @@ def edit_config():
 
     return render_template("config.html", config=config)
 
+
 @app.route("/recordings/<filename>")
 def serve_recording(filename):
     """Serve a specific recording with proper streaming."""
+
     def generate():
         file_path = recordings_path / filename
         with open(file_path, "rb") as f:
@@ -187,17 +210,22 @@ def serve_recording(filename):
         generate(), mimetype="audio/wav", headers={"Accept-Ranges": "bytes"}
     )
 
+
 @app.route("/shutdown", methods=["POST"])
 def shutdown():
     """Mock shutdown the system."""
     logger.info("TEST MODE: System would shut down now")
-    return jsonify({"success": True, "message": "TEST MODE: System would shut down now"})
+    return jsonify(
+        {"success": True, "message": "TEST MODE: System would shut down now"}
+    )
+
 
 @app.route("/reboot", methods=["POST"])
 def reboot():
     """Mock reboot the system."""
     logger.info("TEST MODE: System would reboot now")
     return jsonify({"success": True, "message": "TEST MODE: System would reboot now"})
+
 
 # Additional routes as needed
 
@@ -206,11 +234,11 @@ if __name__ == "__main__":
     # 1. Use the same port as production
     # 2. Disable debugging
     # 3. Listen on all interfaces (but with host='127.0.0.1' for security)
-    
+
     print("\n=== PRODUCTION TEST SERVER ===")
     print(f"Template folder: {app.template_folder}")
     print(f"Static folder: {app.static_folder}")
     print("Starting server at http://127.0.0.1:8000\n")
-    
+
     # Use the Flask development server in production mode
     app.run(debug=False, host="127.0.0.1", port=8000, use_reloader=False)
