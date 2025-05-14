@@ -106,7 +106,9 @@ class AudioGuestBook:
         bounce_time = self.config["hook_bounce_time"]
 
         # Log the configuration for debugging
-        logger.info(f"Hook setup: GPIO={hook_gpio}, type={hook_type}, invert={invert_hook}, bounce_time={bounce_time}")
+        logger.info(
+            f"Hook setup: GPIO={hook_gpio}, type={hook_type}, invert={invert_hook}, bounce_time={bounce_time}"
+        )
 
         pull_up = hook_type == "NC"
 
@@ -119,17 +121,17 @@ class AudioGuestBook:
             # Inverted behavior
             if pull_up:  # NC
                 self.hook.when_released = self.off_hook  # Circuit opens (hook up)
-                self.hook.when_pressed = self.on_hook    # Circuit closes (hook down)
+                self.hook.when_pressed = self.on_hook  # Circuit closes (hook down)
             else:  # NO
-                self.hook.when_released = self.on_hook   # Circuit opens (hook down)
-                self.hook.when_pressed = self.off_hook   # Circuit closes (hook up)
+                self.hook.when_released = self.on_hook  # Circuit opens (hook down)
+                self.hook.when_pressed = self.off_hook  # Circuit closes (hook up)
         else:
             # Normal behavior
             if pull_up:  # NC
-                self.hook.when_pressed = self.off_hook   # Circuit opens (hook up)
-                self.hook.when_released = self.on_hook   # Circuit closes (hook down)
+                self.hook.when_pressed = self.off_hook  # Circuit opens (hook up)
+                self.hook.when_released = self.on_hook  # Circuit closes (hook down)
             else:  # NO
-                self.hook.when_pressed = self.on_hook    # Circuit closes (hook down)
+                self.hook.when_pressed = self.on_hook  # Circuit closes (hook down)
                 self.hook.when_released = self.off_hook  # Circuit opens (hook up)
 
     def off_hook(self):
@@ -180,15 +182,15 @@ class AudioGuestBook:
 
         # Create output filename with timestamp
         timestamp = datetime.now().isoformat()
-        output_file = str(
-            Path(self.config["recordings_path"]) / f"{timestamp}.wav"
-        )
+        output_file = str(Path(self.config["recordings_path"]) / f"{timestamp}.wav")
         logger.info(f"Will save recording to: {output_file}")
 
         # Verify recording path exists and is writable
         recordings_path = Path(self.config["recordings_path"])
         logger.info(f"Recording directory exists: {recordings_path.exists()}")
-        logger.info(f"Recording directory is writable: {os.access(str(recordings_path), os.W_OK)}")
+        logger.info(
+            f"Recording directory is writable: {os.access(str(recordings_path), os.W_OK)}"
+        )
 
         include_beep = bool(self.config["beep_include_in_message"])
 
@@ -324,34 +326,52 @@ class AudioGuestBook:
 
     def stop_recording_and_playback(self):
         """
-        Stop recording and playback processes.
+        Stops all recording and playback processes and cancels any timers.
         """
-        # Cancel the timer first to prevent any race conditions
+        logger.info("Attempting to stop recording and playback processes...")
+
+        if (
+            hasattr(self.audio_interface, "recording_process")
+            and self.audio_interface.recording_process
+        ):  # noqa: E501
+            logger.info("Stopping active recording process...")
+            self.audio_interface.stop_recording()
+        else:
+            logger.info(
+                "No active recording process found or "
+                "recording_process attribute missing/falsey."
+            )
+
+        if (
+            hasattr(self.audio_interface, "playback_process")
+            and self.audio_interface.playback_process
+        ):  # noqa: E501
+            logger.info("Stopping active playback process...")
+            self.audio_interface.stop_playback()
+        else:
+            logger.info(
+                "No active playback process found or "
+                "playback_process attribute missing/falsey."
+            )
+
+        # Cancel and join the timer if it exists and is alive
         if hasattr(self, "timer") and self.timer is not None:
-            self.timer.cancel()
-            self.timer = None
+            if self.timer.is_alive():
+                logger.info("Timer is alive, attempting to cancel and join.")
+                self.timer.cancel()
+                self.timer.join(timeout=1)  # Join with a timeout
+                if self.timer.is_alive():
+                    logger.warning("Timer thread did not join in time after cancel.")
+            self.timer = None  # Set to None after handling
 
-        # Stop recording if it's active
-        self.audio_interface.stop_recording()
-
-        # Stop playback if the greeting thread is still running
-        # Check if the attribute exists and is not None before checking is_alive()
+        # Join the greeting thread if it exists and is alive
         if hasattr(self, "greeting_thread") and self.greeting_thread is not None:
-            try:
+            if self.greeting_thread.is_alive():
+                logger.info("Greeting thread is alive, attempting to join.")
+                self.greeting_thread.join(timeout=1)  # Join with a timeout
                 if self.greeting_thread.is_alive():
-                    logger.info("Stopping playback.")
-                    self.audio_interface.continue_playback = False
-                    self.audio_interface.stop_playback()
-
-                    # Wait for the thread to complete with a longer timeout
-                    self.greeting_thread.join(timeout=3.0)
-            except (RuntimeError, AttributeError) as e:
-                # Handle any race conditions where the thread might change state
-                # between our check and the operation
-                logger.warning(f"Error while stopping playback thread: {e}")
-
-            # Force set to None to ensure clean state for next call
-            self.greeting_thread = None
+                    logger.warning("Greeting thread did not join in time.")
+            # self.greeting_thread = None # Consider setting to None if appropriate
 
         # Ensure the hook listeners are still active
         logger.info("Verifying event listeners are active")

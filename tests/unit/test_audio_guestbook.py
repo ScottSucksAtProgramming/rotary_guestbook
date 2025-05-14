@@ -1,5 +1,5 @@
 import threading
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, Mock
 
 import pytest
 import yaml
@@ -44,45 +44,43 @@ def mock_config():
 @pytest.fixture
 def mock_audio_interface():
     """Create a mock AudioInterface instance."""
-    with patch("audioGuestBook.AudioInterface") as mock:
-        instance = mock.return_value
-        instance.play_audio = MagicMock()
-        instance.start_recording = MagicMock()
-        instance.stop_recording = MagicMock()
-        instance.stop_playback = MagicMock()
-        yield instance
+    # Reverting to simple MagicMock as autospec didn't solve the main issue
+    # and complicated test_init.
+    with patch("audioGuestBook.AudioInterface") as mock_class:
+        yield mock_class.return_value
 
 
 @pytest.fixture
 def mock_button():
-    """Create a mock Button instance."""
-    with patch("audioGuestBook.Button") as mock:
-        instance = mock.return_value
-        instance.when_pressed = None
-        instance.when_released = None
-        yield instance
+    """Create a mock Button CLASS and yield it."""
+    with patch("audioGuestBook.Button") as mock_class:
+        # The code under test will call mock_class() to get an instance.
+        # That instance (mock_class.return_value) will be a MagicMock
+        # by default. Attributes like .when_pressed are set by the code
+        # on this instance.
+        yield mock_class
 
 
 @pytest.fixture
-def guest_book(mock_config, tmp_path):
+def guest_book(mock_config, tmp_path, mock_audio_interface, mock_button):
     """Create an AudioGuestBook instance with test configuration."""
     # Create a temporary config file
     config_path = tmp_path / "config.yaml"
     with open(config_path, "w") as f:
         yaml.dump(mock_config, f)
 
-    with (
-        patch("audioGuestBook.AudioInterface"),
-        patch("audioGuestBook.Button"),
-    ):
-        return AudioGuestBook(str(config_path))
+    # The AudioGuestBook will pick up the mocks when it tries to import Button
+    # and AudioInterface, because the mock_audio_interface and mock_button
+    # fixtures have already patched them.
+    return AudioGuestBook(str(config_path))
 
 
 def test_init(guest_book, mock_config):
     """Test AudioGuestBook initialization."""
     assert guest_book.config == mock_config
     assert guest_book.current_event == CurrentEvent.NONE
-    assert isinstance(guest_book.audio_interface, MagicMock)
+    # Check if it's an instance of the general Mock class
+    assert isinstance(guest_book.audio_interface, Mock)
 
 
 def test_load_config_file_not_found(tmp_path):
@@ -96,6 +94,7 @@ def test_setup_hook_nc(guest_book, mock_button):
     guest_book.config["hook_type"] = "NC"
     guest_book.config["invert_hook"] = False
 
+    mock_button.reset_mock()  # Reset calls from __init__
     guest_book.setup_hook()
 
     # Verify button was created with correct parameters
@@ -111,6 +110,7 @@ def test_setup_hook_no(guest_book, mock_button):
     guest_book.config["hook_type"] = "NO"
     guest_book.config["invert_hook"] = False
 
+    mock_button.reset_mock()  # Reset calls from __init__
     guest_book.setup_hook()
 
     # Verify button was created with correct parameters
@@ -140,14 +140,25 @@ def test_off_hook(guest_book, mock_audio_interface):
 
 def test_on_hook(guest_book, mock_audio_interface):
     """Test on-hook event handling."""
-    # Set up initial state
+    assert guest_book.audio_interface is mock_audio_interface
+
     guest_book.current_event = CurrentEvent.HOOK
     guest_book.greeting_thread = threading.Thread(target=lambda: None)
     guest_book.greeting_thread.start()
 
+    mock_audio_interface.stop_recording.reset_mock()
+    mock_audio_interface.stop_playback.reset_mock()
+
+    # Explicitly set up mock attributes that will be checked/used
+    mock_audio_interface.recording_process = MagicMock()
+    mock_audio_interface.playback_process = MagicMock()
+    mock_audio_interface.stop_recording.side_effect = None
+
+    assert guest_book.audio_interface.recording_process  # Verify truthy
+    assert guest_book.audio_interface.playback_process  # Verify truthy
+
     guest_book.on_hook()
 
-    # Verify state was reset
     assert guest_book.current_event == CurrentEvent.NONE
     mock_audio_interface.stop_recording.assert_called_once()
     mock_audio_interface.stop_playback.assert_called_once()
@@ -170,6 +181,8 @@ def test_play_greeting_and_beep(guest_book, mock_audio_interface, tmp_path):
     recordings_path.mkdir()
     guest_book.config["recordings_path"] = str(recordings_path)
 
+    # Ensure event is HOOK for beep
+    guest_book.current_event = CurrentEvent.HOOK
     guest_book.play_greeting_and_beep()
 
     # Verify greeting was played
@@ -195,6 +208,7 @@ def test_time_exceeded(guest_book, mock_audio_interface):
 
 def test_setup_record_greeting(guest_book, mock_button):
     """Test record greeting button setup."""
+    mock_button.reset_mock()  # Reset calls from __init__
     guest_book.setup_record_greeting()
 
     # Verify button was created with correct parameters
@@ -208,19 +222,31 @@ def test_setup_record_greeting(guest_book, mock_button):
 def test_setup_record_greeting_disabled(guest_book, mock_button):
     """Test record greeting setup when disabled."""
     guest_book.config["record_greeting_gpio"] = 0
+    mock_button.reset_mock()  # Reset calls from __init__
     guest_book.setup_record_greeting()
     mock_button.assert_not_called()
 
 
 def test_stop_recording_and_playback(guest_book, mock_audio_interface):
     """Test stopping recording and playback."""
-    # Set up initial state
+    assert guest_book.audio_interface is mock_audio_interface
+
     guest_book.greeting_thread = threading.Thread(target=lambda: None)
     guest_book.greeting_thread.start()
 
+    mock_audio_interface.stop_recording.reset_mock()
+    mock_audio_interface.stop_playback.reset_mock()
+
+    # Explicitly set up mock attributes that will be checked/used
+    mock_audio_interface.recording_process = MagicMock()
+    mock_audio_interface.playback_process = MagicMock()
+    mock_audio_interface.stop_recording.side_effect = None
+
+    assert guest_book.audio_interface.recording_process  # Verify truthy
+    assert guest_book.audio_interface.playback_process  # Verify truthy
+
     guest_book.stop_recording_and_playback()
 
-    # Verify audio processes were stopped
     mock_audio_interface.stop_recording.assert_called_once()
     mock_audio_interface.stop_playback.assert_called_once()
 
