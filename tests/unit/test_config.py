@@ -34,6 +34,7 @@ from rotary_guestbook.config import (
     ConfigManager,
     HardwareSettings,
     LoggingSettings,
+    RecordingSettings,
     SystemSettings,
     WebSettings,
 )
@@ -49,19 +50,24 @@ def valid_config_data() -> Dict[str, Any]:
     """
     return {
         "audio": {
-            "input_device": "default",
-            "output_device": "default",
-            "sample_rate": 44100,
-            "channels": 2,
-            "chunk_size": 1024,
-            "format": "int16",
-            "max_recording_time": 300,
+            "output_device_index": None,  # Or some valid index
+            "greeting_message_path": "path/to/greeting.wav",
             "min_recording_time": 3,
             "silence_threshold": 0.01,
             "silence_duration": 2,
-            "recording_format": "mp3",
-            "bitrate": "128k",
             "output_directory": "recordings",
+            "recording": {
+                "input_device_index": None,  # Or some valid index
+                "rate": 44100,
+                "channels": 2,
+                "sample_width": 2,
+                "chunk_size": 1024,
+                "max_duration_seconds": 300,
+            },
+            "conversion": {
+                "mp3_bitrate": "128k",
+                "ffmpeg_parameters": None,
+            },
         },
         "hardware": {
             "hook_switch_pin": 17,
@@ -125,7 +131,7 @@ def test_load_valid_config(config_file: Path) -> None:
         config_file: Path to a temporary configuration file with valid data
     """
     config_manager = ConfigManager(str(config_file))
-    assert config_manager.audio.sample_rate == 44100
+    assert config_manager.audio.recording.rate == 44100
     assert config_manager.hardware.hook_switch_pin == 17
     assert config_manager.web.port == 5000
     assert config_manager.logging.level == "INFO"
@@ -173,8 +179,8 @@ def test_load_invalid_config(tmp_path: Path) -> None:
 def test_default_values() -> None:
     """Test that default values are used when not specified in config."""
     config = Config()
-    assert config.audio.sample_rate == 44100
-    assert config.audio.channels == 1
+    assert config.audio.recording.rate == 44100
+    assert config.audio.recording.channels == 1
     assert config.hardware.hook_switch_pin == 17
     assert config.web.port == 5000
     assert config.logging.level == "INFO"
@@ -185,23 +191,22 @@ def test_audio_settings_validation() -> None:
     """Test validation of audio settings."""
     # Test invalid sample rate
     with pytest.raises(ValueError) as exc_info:
-        AudioSettings(sample_rate=1000)  # Below minimum
-    assert "sample_rate" in str(exc_info.value)
+        AudioSettings(recording=RecordingSettings(rate=1000))  # Below minimum
+    assert "Input should be greater than or equal to 8000" in str(exc_info.value)
 
     # Test invalid channels
     with pytest.raises(ValueError) as exc_info:
-        AudioSettings(channels=3)  # Above maximum
-    assert "channels" in str(exc_info.value)
+        AudioSettings(recording=RecordingSettings(channels=3))  # Above maximum
+    assert "Input should be less than or equal to 2" in str(exc_info.value)
 
-    # Test invalid format
+    # Test invalid output_directory
     with pytest.raises(ValueError) as exc_info:
-        AudioSettings(format="invalid")
-    assert "Unsupported audio format" in str(exc_info.value)
+        AudioSettings(output_directory="/abs/path/recordings")
+    assert "output_directory must be a relative path" in str(exc_info.value)
 
-    # Test invalid recording format
     with pytest.raises(ValueError) as exc_info:
-        AudioSettings(recording_format="invalid")
-    assert "Unsupported recording format" in str(exc_info.value)
+        AudioSettings(output_directory="")
+    assert "output_directory must be a non-empty string" in str(exc_info.value)
 
 
 def test_hardware_settings_validation() -> None:
@@ -273,12 +278,11 @@ def test_save_config(config_file: Path) -> None:
         config_file: Path to a temporary configuration file
     """
     config_manager = ConfigManager(str(config_file))
-    config_manager.audio.sample_rate = 48000
+    config_manager.audio.recording.rate = 48000
     config_manager.save_config()
 
-    # Load the saved config and verify changes
-    new_config_manager = ConfigManager(str(config_file))
-    assert new_config_manager.audio.sample_rate == 48000
+    reloaded_config_manager = ConfigManager(str(config_file))
+    assert reloaded_config_manager.audio.recording.rate == 48000
 
 
 def test_save_config_error(config_file: Path) -> None:

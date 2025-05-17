@@ -2,10 +2,10 @@
 
 import abc
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from pydub import AudioSegment
-from pydub.exceptions import CouldntEncodeError
+from pydub.exceptions import CouldntDecodeError, CouldntEncodeError
 
 from rotary_guestbook.errors import AudioError, ConfigError
 
@@ -169,9 +169,11 @@ class AudioManager:
             logger.info("Recording stopped.")
         except AudioError as e:
             logger.error(f"Error stopping recording: {e.message}", exc_info=True)
+            self._is_recording = False
             raise
         except Exception as e:
             logger.error("Unexpected error stopping recording", exc_info=True)
+            self._is_recording = False
             raise AudioError(
                 "Failed to stop recording due to an unexpected error.", str(e)
             )
@@ -280,51 +282,59 @@ class PyAudioBackend(AbstractAudioBackend):
         self._initialize_pyaudio()
         assert self._pyaudio_instance is not None
 
-        stream = None
         try:
             pya = self._pyaudio_instance
             pya_format = pya.get_format_from_width(audio_segment.sample_width)
             output_device_idx = self._audio_settings.output_device_index
-            stream = pya.open(
+            self._stream = pya.open(
                 format=pya_format,
                 channels=audio_segment.channels,
                 rate=audio_segment.frame_rate,
                 output=True,
                 output_device_index=output_device_idx,
             )
-            device_info = output_device_idx or "default"
-            logger.info(
-                f"PyAudio stream opened for greeting playback. Device: {device_info}"
+            assert self._stream is not None  # Should be opened
+
+            logger.info(f"Playing audio from {greeting_path}...")
+            # Actual playback loop
+            chunk_size = 1024  # Standard chunk size
+            data_chunks = (
+                audio_segment.raw_data[i : i + chunk_size]
+                for i in range(0, len(audio_segment.raw_data), chunk_size)
             )
+            for chunk in data_chunks:
+                if not self._stream:
+                    logger.warning("Playback stream was closed prematurely.")
+                    break
+                self._stream.write(chunk)
 
-            chunk_size_frames = 1024
-            raw_data = audio_segment.raw_data
-            frame_width = audio_segment.sample_width * audio_segment.channels
-
-            for i in range(0, len(raw_data), chunk_size_frames * frame_width):
-                chunk_end = i + (chunk_size_frames * frame_width)
-                stream.write(raw_data[i:chunk_end])
-
-            logger.info("Greeting playback finished.")
+            logger.info(f"Finished playing {greeting_path}.")
 
         except Exception as e:  # Catches pyaudio.PaError, OSError etc.
             logger.error("PyAudio error during greeting playback", exc_info=True)
             raise AudioError("Error playing greeting via PyAudio.", str(e))
         finally:
-            if stream:
+            if self._stream:
                 try:
-                    stream.stop_stream()
-                    stream.close()
-                    logger.info("PyAudio stream closed for greeting playback.")
-                except Exception as e_close:
-                    logger.warning(f"Error closing greeting playback stream: {e_close}")
+                    self._stream.stop_stream()
+                    self._stream.close()
+                except Exception as e:
+                    logger.error(f"Error closing playback stream: {e}", exc_info=True)
+                self._stream = None
 
     def start_recording(self, filename: str) -> None:
         """Start recording audio to the specified WAV file using PyAudio."""
-        # AudioManager handles the "already recording" state.
-        # Initial stream check removed due to mypy issue (self._stream is None here).
-        # if self._stream and self._stream.is_active():
-        #     logger.warning("start_recording called but a stream is already active.")
+        logger.debug(f"PyAudioBackend: start_recording called for {filename}")
+
+        if self._stream is not None and self._stream.is_active():
+            logger.warning(
+                "PyAudioBackend: start_recording called when stream already active."
+            )
+            raise AudioError(
+                "Recording or playback is already in progress",
+                details="PyAudio stream is already active.",
+            )
+
         self._initialize_pyaudio()
         assert self._pyaudio_instance is not None
 
@@ -452,6 +462,7 @@ class PyAudioBackend(AbstractAudioBackend):
         output_filename = self._current_recording_filename
         if not output_filename:
             logger.error("Output filename not set. Cannot save WAV.")
+            # Should not happen if logic is correct, but good to guard
             raise AudioError("Internal error: output filename for recording not set.")
 
         logger.info(f"Saving recorded audio to {output_filename}")
@@ -464,57 +475,102 @@ class PyAudioBackend(AbstractAudioBackend):
             )
             audio_segment.export(output_filename, format="wav")
             logger.info(f"Recording saved successfully to {output_filename}")
-        except CouldntEncodeError as e_encode:
-            logger.error(f"Pydub error saving WAV {output_filename}", exc_info=True)
-            raise AudioError(
-                f"Could not save recorded WAV file: {output_filename}", str(e_encode)
-            )
-        except Exception as e_save:
+        except IOError as e:
             logger.error(
-                f"Unexpected error saving WAV {output_filename}", exc_info=True
+                f"IOError saving WAV file {output_filename}: {e}", exc_info=True
             )
             raise AudioError(
-                f"Unexpected error saving WAV file: {output_filename}", str(e_save)
+                f"Could not save WAV file: {output_filename}", details=str(e)
+            )
+        except Exception as e:  # Catch-all for other unexpected errors
+            logger.error(
+                f"Unexpected error saving WAV file {output_filename}: {e}",
+                exc_info=True,
+            )
+            raise AudioError(
+                f"Unexpected error saving WAV file: {output_filename}", details=str(e)
             )
         finally:
+            # Always clear frames and filename after attempting to save
             self._frames = []
             self._current_recording_filename = None
 
     def convert_to_mp3(self, input_wav: str, output_mp3: str) -> None:
         """Convert a WAV audio file to MP3 format using Pydub."""
-        logger.info(f"Converting {input_wav} to {output_mp3} using Pydub.")
-        try:
-            audio = AudioSegment.from_wav(input_wav)
-            export_params: dict[str, Any] = {"format": "mp3"}
+        logger.info(f"Attempting to convert {input_wav} to {output_mp3}")
 
-            conv_settings: Optional["ConversionSettings"] = (
-                self._audio_settings.conversion
+        conversion_settings: Optional["ConversionSettings"] = (
+            self._audio_settings.conversion
+        )
+        if not conversion_settings:
+            msg = "Audio conversion settings are not configured."
+            logger.error(msg)
+            raise ConfigError(
+                msg, details="Ensure 'conversion' section in audio config."
             )
-            if conv_settings:
-                if conv_settings.mp3_bitrate:
-                    export_params["bitrate"] = conv_settings.mp3_bitrate
-                if conv_settings.ffmpeg_parameters:
-                    export_params["parameters"] = conv_settings.ffmpeg_parameters
 
-            audio.export(output_mp3, **export_params)
-            logger.info(f"Successfully converted {input_wav} to {output_mp3}")
+        try:
+            audio_segment = AudioSegment.from_file(input_wav)
+            logger.debug(f"Successfully loaded {input_wav} for conversion.")
         except FileNotFoundError:
-            logger.error(f"Input WAV file not found for Pydub conversion: {input_wav}")
+            logger.error(f"Input WAV file not found: {input_wav}")
+            # Let FileNotFoundError propagate as per AbstractAudioBackend docstring
             raise
-        except CouldntEncodeError as e_encode:
+        except CouldntDecodeError as e:
             logger.error(
-                f"Pydub/ffmpeg error converting {input_wav} to {output_mp3}. "
-                f"Ensure ffmpeg is installed and in PATH.",
+                f"Could not decode input WAV file {input_wav}: {e}", exc_info=True
+            )
+            raise AudioError(
+                f"Could not decode input WAV file: {input_wav}", details=str(e)
+            )
+        except Exception as e:  # Catch other loading errors
+            logger.error(
+                f"Error loading input WAV file {input_wav}: {e}", exc_info=True
+            )
+            raise AudioError(
+                f"Error loading input WAV file: {input_wav}", details=str(e)
+            )
+
+        logger.debug(
+            f"Converting to MP3: {input_wav} -> {output_mp3}, "
+            f"bitrate {conversion_settings.mp3_bitrate}"
+        )
+        try:
+            # Ensure parameters and tags are None if empty, as pydub expects
+            export_params = conversion_settings.ffmpeg_parameters or None
+            export_tags = getattr(conversion_settings, "id3_tags", None) or None
+
+            audio_segment.export(
+                output_mp3,
+                format="mp3",
+                bitrate=conversion_settings.mp3_bitrate,
+                parameters=export_params,
+                tags=export_tags,
+            )
+            logger.info(
+                f"Successfully converted {input_wav} to {output_mp3} using pydub."
+            )
+        except CouldntEncodeError as e:
+            logger.error(
+                f"Pydub CouldntEncodeError for {output_mp3}. "
+                "Ensure ffmpeg/lame is installed and in PATH.",
                 exc_info=True,
             )
             raise AudioError(
-                f"Failed to convert {input_wav} to MP3. Ensure ffmpeg is installed.",
-                details=str(e_encode),
+                f"MP3 encoding failed for {output_mp3}. "
+                "This usually means ffmpeg or lame is not installed or not found.",
+                details=str(e),
             )
-        except Exception as e_conv:
-            logger.error("Unexpected error during Pydub MP3 conversion", exc_info=True)
+        except IOError as e:  # For filesystem errors during write
+            logger.error(f"IOError writing MP3 file {output_mp3}: {e}", exc_info=True)
+            raise AudioError(f"Could not write MP3 file: {output_mp3}", details=str(e))
+        except Exception as e:  # Catch-all for other pydub export errors
+            logger.error(
+                f"Unexpected error converting {input_wav} to {output_mp3}: {e}",
+                exc_info=True,
+            )
             raise AudioError(
-                f"Unexpected error converting {input_wav} to MP3.", details=str(e_conv)
+                f"Unexpected error converting to MP3: {output_mp3}", details=str(e)
             )
 
     def __del__(self) -> None:
