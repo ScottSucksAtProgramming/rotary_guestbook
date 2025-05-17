@@ -122,14 +122,13 @@ For each module below, follow this pattern:
 1.  **`src/rotary_guestbook/audio.py` (AudioManager & Concrete Backend):**
     *   **Goal:** Manage audio playback and recording.
     *   **Implementation:**
-        *   [ ] `AudioManager` class:
-            *   [ ] Takes an `AbstractAudioBackend` and `ConfigManager` in its constructor.
-            *   [ ] Orchestrates audio operations (e.g., play welcome, record message).
+        *   [x] `AudioManager` class:
+            *   [x] Takes an `AbstractAudioBackend` and `ConfigManager` in its constructor.
+            *   [x] Orchestrates audio operations (e.g., play welcome, record message).
         *   [ ] Concrete `PyAudioBackend(AbstractAudioBackend)` (or `AlsaBackend`, `SounddeviceBackend`):
-            *   [ ] Implements the methods defined in `AbstractAudioBackend` using a specific audio library (e.g., PyAudio, python-sounddevice). This will involve interacting with system audio.
             *   [ ] Handles audio format conversions if necessary (e.g., WAV to MP3 using `pydub` or `subprocess` calls to `ffmpeg`/`lame`).
     *   **Testing (`tests/unit/test_audio.py`):**
-        *   [ ] Test `AudioManager` logic by mocking the `AbstractAudioBackend`.
+        *   [x] Test `AudioManager` logic by mocking the `AbstractAudioBackend`.
         *   [ ] Test the concrete backend. This is trickier as it interacts with hardware/OS.
             *   [ ] Mock the underlying audio libraries (e.g., `pyaudio.PyAudio`, `sounddevice.Stream`).
             *   [ ] For subprocess calls (like `ffmpeg`), mock `subprocess.run`.
