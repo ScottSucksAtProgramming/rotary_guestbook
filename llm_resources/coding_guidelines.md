@@ -102,3 +102,18 @@ This document outlines the core principles and practices we will adhere to while
 - All configuration code must use Pydantic v2 models, with `@field_validator` for validation and `model_dump()` for serialization.
 - Any changes to configuration structure must be reflected in `config.yaml.example` and covered by unit tests to maintain 100% coverage.
 - No linter or deprecation warnings are allowed in configuration code.
+
+### 6. Managing Warnings
+
+*   **Third-Party Library Warnings:**
+    *   Occasionally, third-party libraries may produce warnings (e.g., `DeprecationWarning`) that are outside of our direct control if we are already using the latest version of the library.
+    *   If such a warning is understood and doesn't immediately impact functionality, it can be suppressed within `pytest.ini` to keep test outputs clean.
+    *   Example: The `pydub` library (version 0.25.1) uses the `audioop` module, which is deprecated and slated for removal in Python 3.13. This `DeprecationWarning` is currently suppressed in `pytest.ini` as follows:
+        ```ini
+        [pytest]
+        # ... other configurations ...
+        filterwarnings =
+            # ... other filters ...
+            ignore:'audioop' is deprecated and slated for removal in Python 3.13:DeprecationWarning:pydub\.utils
+        ```
+    *   It's important to periodically review suppressed warnings, especially when updating Python versions or major library dependencies, to see if they have been resolved or if the underlying issue now poses a problem.
