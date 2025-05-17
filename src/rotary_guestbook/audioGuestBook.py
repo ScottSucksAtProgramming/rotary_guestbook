@@ -302,7 +302,7 @@ class AudioGuestBook:
 
     def beep_and_record_greeting(self):
         """
-        Plays the beep and start recording a new greeting message #, checking for the button event.
+        Beeps and starts recording a new greeting message, checks for button event.
         """
 
         self.audio_interface.continue_playback = (

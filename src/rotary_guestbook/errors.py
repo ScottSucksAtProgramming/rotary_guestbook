@@ -14,7 +14,8 @@ Example:
         # Some operation that might fail
         raise ConfigError("Failed to load configuration", "File not found")
     except ConfigError as e:
-        print(f"Error: {e}")  # Output: "Error: Failed to load configuration - File not found"
+        print(f"Error: {e}")
+        # Output: "Error: Failed to load configuration - File not found"
     ```
 
 Note:
