@@ -156,6 +156,7 @@ Build docs with:
 - **Integration Tests:** in `tests/integration`, run on Pi with real GPIO & audio interface.
 - **End-to-End (E2E):** Optional `tests/e2e` using a Raspberry Pi testbed; use `pexpect` to run `app.py` and simulate events.
 - **Coverage Enforcement:** `pytest --cov=rotary_guestbook --cov-fail-under=90` and `interrogate --min-coverage 100`.
+- **Note on Pytest Warnings:** `pytest.ini` includes a filter to suppress `PytestConfigWarning` for `pytest-asyncio` specific options (e.g., `asyncio_mode`). These warnings can occur if `pytest` core parses the options before `pytest-asyncio` registers them, but they are benign if the asyncio configuration is correct and tests pass.
 
 Sample `ci.yml` steps:
 
