@@ -300,7 +300,7 @@ def mock_pyaudio_core_module() -> Generator[MagicMock, None, None]:
 
     # Try to import real pyaudio for speccing, fallback to MagicMock class
     try:
-        import pyaudio as real_pyaudio
+        import pyaudio as real_pyaudio  # type: ignore[unreachable]
 
         PyAudio_spec_class = real_pyaudio.PyAudio
         Stream_spec_class = real_pyaudio.Stream
@@ -780,7 +780,7 @@ class TestPyAudioBackend:
 
         mock_inactive_stream.close.assert_called_once()
         assert backend._stream is None
-        self.mock_audio_segment_class.assert_not_called()  # type: ignore [unreachable]
+        self.mock_audio_segment_class.assert_not_called()  # type: ignore[unreachable]
 
     def test_stop_recording_no_frames_recorded(self, backend: PyAudioBackend) -> None:
         """Test stop_recording does not save WAV if no frames were recorded."""
@@ -1058,7 +1058,7 @@ class TestPyAudioBackend:
 
         mock_inactive_stream.close.assert_called_once()
         assert backend._stream is None
-        self.mock_audio_segment_class.assert_not_called()  # type: ignore [unreachable]
+        self.mock_audio_segment_class.assert_not_called()  # type: ignore[unreachable]
 
     def test_stop_recording_active_stream_stop_exception(
         self, backend: PyAudioBackend, mock_config_manager: MagicMock

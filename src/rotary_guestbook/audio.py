@@ -434,14 +434,24 @@ class PyAudioBackend(AbstractAudioBackend):
             try:
                 if stream.is_active():
                     stream.stop_stream()
-                stream.close()
-                logger.info("PyAudio stream stopped and closed.")
-            except Exception as e_stop:
+            except Exception as e_stop_stream:
+                # Log the error from stop_stream but continue to try closing
                 logger.error(
-                    f"Error stopping/closing PyAudio stream: {e_stop}", exc_info=True
+                    f"Error during stream.stop_stream(): {e_stop_stream}",
+                    exc_info=True,
                 )
-            # Always set self._stream to None after attempting to close
-            self._stream = None
+            finally:
+                # Always attempt to close the stream
+                try:
+                    stream.close()
+                    logger.info("PyAudio stream closed.")
+                except Exception as e_close_stream:
+                    logger.error(
+                        f"Error during stream.close(): {e_close_stream}",
+                        exc_info=True,
+                    )
+                # Always set self._stream to None after attempting to close
+                self._stream = None
 
         # At this point, self._stream is None. We might have frames.
         if not self._frames:
