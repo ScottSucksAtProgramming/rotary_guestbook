@@ -324,6 +324,191 @@ class TestFileSystemStorageBackend:
         with pytest.raises(ArchiveError, match="OSError listing messages"):
             storage.list_messages()
 
+    @patch("json.dump")
+    def test_save_message_unexpected_exception(
+        self,
+        mock_json_dump: MagicMock,
+        mock_config_manager: MagicMock,
+        temp_audio_file: Path,
+    ) -> None:
+        """Test ArchiveError if an unexpected exception occurs during save_message."""
+        mock_json_dump.side_effect = TypeError("Unexpected type error")
+        storage = FileSystemStorageBackend(mock_config_manager)
+        metadata = {"filename": temp_audio_file.name}
+        with pytest.raises(ArchiveError, match="Unexpected error saving message"):
+            storage.save_message(str(temp_audio_file), metadata)
+        # Ensure cleanup: audio and metadata files should not exist
+        recordings_dir = Path(mock_config_manager.audio.output_directory)
+        message_id = temp_audio_file.stem
+        assert not (recordings_dir / temp_audio_file.name).exists()
+        assert not (recordings_dir / f"{message_id}.json").exists()
+
+    def test_get_message_fallback_audio_format(
+        self,
+        mock_config_manager: MagicMock,
+        temp_audio_file: Path,
+    ) -> None:
+        """Test get_message finds .wav file if audio_file_path missing in metadata."""
+        storage = FileSystemStorageBackend(mock_config_manager)
+        recordings_dir = Path(mock_config_manager.audio.output_directory)
+        message_id = "msg_fallback"
+        # Create a .wav file
+        wav_path = recordings_dir / f"{message_id}.wav"
+        wav_path.write_bytes(b"dummy wav data")
+        # Metadata without audio_file_path
+        meta = {"filename": f"{message_id}.wav", "message_id": message_id}
+        with open(recordings_dir / f"{message_id}.json", "w") as f:
+            json.dump(meta, f)
+        result = storage.get_message(message_id)
+        assert result is not None
+        audio_path, metadata = result
+        assert audio_path.endswith(".wav")
+        assert metadata["filename"] == f"{message_id}.wav"
+
+    def test_list_messages_fallback_audio_format(
+        self,
+        mock_config_manager: MagicMock,
+    ) -> None:
+        """Test list_messages includes message if .ogg exists and path is missing."""
+        storage = FileSystemStorageBackend(mock_config_manager)
+        recordings_dir = Path(mock_config_manager.audio.output_directory)
+        message_id = "msg_ogg"
+        ogg_path = recordings_dir / f"{message_id}.ogg"
+        ogg_path.write_bytes(b"dummy ogg data")
+        meta = {"filename": f"{message_id}.ogg", "message_id": message_id}
+        with open(recordings_dir / f"{message_id}.json", "w") as f:
+            json.dump(meta, f)
+        messages = storage.list_messages()
+        assert any(m["filename"] == f"{message_id}.ogg" for m in messages)
+
+    def test_list_messages_recordings_dir_missing(
+        self,
+        mock_config_manager: MagicMock,
+    ) -> None:
+        """Test list_messages returns empty list if recordings folder does not exist."""
+        recordings_dir = Path(mock_config_manager.audio.output_directory)
+        if recordings_dir.exists():
+            for child in recordings_dir.iterdir():
+                if child.is_file():
+                    child.unlink()
+            recordings_dir.rmdir()
+        storage = FileSystemStorageBackend(mock_config_manager)
+        # Remove the directory after initialization
+        recordings_dir.rmdir()
+        assert storage.list_messages() == []
+
+    def test_list_messages_sorting_by_timestamp(
+        self,
+        mock_config_manager: MagicMock,
+    ) -> None:
+        """Test that list_messages sorts messages by timestamp descending."""
+        storage = FileSystemStorageBackend(mock_config_manager)
+        recordings_dir = Path(mock_config_manager.audio.output_directory)
+        # Message 1
+        msg1_id = "sort1"
+        (recordings_dir / f"{msg1_id}.mp3").touch()
+        meta1 = {
+            "message_id": msg1_id,
+            "timestamp": "2023-01-01T10:00:00",
+            "audio_file_path": str(recordings_dir / f"{msg1_id}.mp3"),
+        }
+        with open(recordings_dir / f"{msg1_id}.json", "w") as f:
+            json.dump(meta1, f)
+        # Message 2
+        msg2_id = "sort2"
+        (recordings_dir / f"{msg2_id}.mp3").touch()
+        meta2 = {
+            "message_id": msg2_id,
+            "timestamp": "2023-01-01T12:00:00",
+            "audio_file_path": str(recordings_dir / f"{msg2_id}.mp3"),
+        }
+        with open(recordings_dir / f"{msg2_id}.json", "w") as f:
+            json.dump(meta2, f)
+        messages = storage.list_messages()
+        assert len(messages) == 2
+        assert messages[0]["timestamp"] == "2023-01-01T12:00:00"
+        assert messages[1]["timestamp"] == "2023-01-01T10:00:00"
+
+    def test_get_message_no_audio_file_found(
+        self,
+        mock_config_manager: MagicMock,
+    ) -> None:
+        """
+        Test get_message returns None if no audio file is found for any extension.
+
+        This also requires no audio_file_path in metadata.
+        """
+        storage = FileSystemStorageBackend(mock_config_manager)
+        recordings_dir = Path(mock_config_manager.audio.output_directory)
+        message_id = "no_audio"
+        # Metadata without audio_file_path, and no audio files exist
+        meta = {
+            "filename": f"{message_id}.mp3",
+            "message_id": message_id,
+        }
+        with open(recordings_dir / f"{message_id}.json", "w") as f:
+            json.dump(meta, f)
+        result = storage.get_message(message_id)
+        assert result is None
+
+    def test_get_message_audio_file_path_present_but_missing(
+        self,
+        mock_config_manager: MagicMock,
+    ) -> None:
+        """
+        Test get_message returns None if audio_file_path is present in metadata.
+
+        This occurs when the file does not exist.
+        """
+        storage = FileSystemStorageBackend(mock_config_manager)
+        recordings_dir = Path(mock_config_manager.audio.output_directory)
+        message_id = "audio_path_missing"
+        meta = {
+            "filename": f"{message_id}.mp3",
+            "message_id": message_id,
+            "audio_file_path": str(recordings_dir / f"{message_id}.mp3"),
+        }
+        with open(recordings_dir / f"{message_id}.json", "w") as f:
+            json.dump(meta, f)
+        # Do NOT create the audio file
+        result = storage.get_message(message_id)
+        assert result is None
+
+    def test_list_messages_sorting_with_missing_timestamps(
+        self,
+        mock_config_manager: MagicMock,
+    ) -> None:
+        """
+        Test that list_messages sorts messages with and without timestamps.
+
+        Ensures the sort key fallback is exercised.
+        """
+        storage = FileSystemStorageBackend(mock_config_manager)
+        recordings_dir = Path(mock_config_manager.audio.output_directory)
+        # Message with timestamp
+        msg1_id = "with_timestamp"
+        (recordings_dir / f"{msg1_id}.mp3").touch()
+        meta1 = {
+            "message_id": msg1_id,
+            "timestamp": "2023-01-01T10:00:00",
+            "audio_file_path": str(recordings_dir / f"{msg1_id}.mp3"),
+        }
+        with open(recordings_dir / f"{msg1_id}.json", "w") as f:
+            json.dump(meta1, f)
+        # Message without timestamp
+        msg2_id = "no_timestamp"
+        (recordings_dir / f"{msg2_id}.mp3").touch()
+        meta2 = {
+            "message_id": msg2_id,
+            "audio_file_path": str(recordings_dir / f"{msg2_id}.mp3"),
+        }
+        with open(recordings_dir / f"{msg2_id}.json", "w") as f:
+            json.dump(meta2, f)
+        messages = storage.list_messages()
+        # The message with timestamp should come first
+        assert messages[0]["message_id"] == msg1_id
+        assert messages[1]["message_id"] == msg2_id
+
 
 @pytest.fixture
 def mock_storage_backend() -> MagicMock:
@@ -432,3 +617,12 @@ class TestMessageArchiver:
         result = archiver.list_all_messages()
         assert result == expected_list
         mock_storage_backend.list_messages.assert_called_once()
+
+
+class TestAbstractStorageBackend:
+    """Tests for AbstractStorageBackend instantiation."""
+
+    def test_cannot_instantiate_abstract_class(self) -> None:
+        """Test that instantiating AbstractStorageBackend raises TypeError."""
+        with pytest.raises(TypeError):
+            AbstractStorageBackend()
