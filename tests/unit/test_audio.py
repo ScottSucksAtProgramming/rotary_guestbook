@@ -231,7 +231,7 @@ class TestAudioManager:
         with pytest.raises(AudioError, match="Failed to stop recording") as exc_info:
             am.stop_recording()
         assert exc_info.value.details == str(exc)
-        assert not am.is_recording  # Should still be set to False
+        assert not am.is_recording
 
     def test_convert_to_mp3_success(
         self, mock_audio_backend: MagicMock, mock_config_manager: MagicMock
@@ -285,7 +285,7 @@ class TestAudioManager:
         assert not am.is_recording
         am.start_recording("test")
         assert am.is_recording
-        am.stop_recording()
+        am.stop_recording()  # type: ignore
         assert not am.is_recording
 
 
