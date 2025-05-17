@@ -1,0 +1,69 @@
+# Rotary Phone Audio Guestbook Configuration
+
+# Audio settings
+audio:
+  # Audio device settings
+  input_device: "default"  # or specific device name
+  output_device: "default"  # or specific device name
+  sample_rate: 44100
+  channels: 1
+  chunk_size: 1024
+  format: "int16"
+  
+  # Recording settings
+  max_recording_time: 300  # seconds
+  min_recording_time: 3  # seconds
+  silence_threshold: 0.01
+  silence_duration: 2  # seconds
+  
+  # File settings
+  recording_format: "mp3"
+  bitrate: "128k"
+  output_directory: "recordings"
+
+# Hardware settings
+hardware:
+  # GPIO pin numbers (BCM numbering)
+  hook_switch_pin: 17
+  rotary_pulse_pin: 27
+  rotary_dial_pin: 22
+  
+  # Debounce settings (milliseconds)
+  hook_switch_debounce: 50
+  rotary_pulse_debounce: 10
+
+# Web interface settings
+web:
+  host: "0.0.0.0"
+  port: 5000
+  debug: false
+  secret_key: "change_this_in_production"
+  
+  # Security settings
+  auth:
+    enabled: true
+    username: "admin"
+    password: "change_this_in_production"
+
+# Logging settings
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "guestbook.log"
+  max_size: 10485760  # 10MB
+  backup_count: 5
+
+# System settings
+system:
+  # Health check settings
+  health_check_interval: 300  # seconds
+  disk_space_threshold: 90  # percentage
+  cpu_usage_threshold: 80  # percentage
+  memory_usage_threshold: 80  # percentage
+  
+  # Archive settings
+  archive:
+    enabled: true
+    interval: 86400  # 24 hours in seconds
+    keep_local: true
+    backup_location: "backups" 
