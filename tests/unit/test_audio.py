@@ -66,6 +66,40 @@ def mock_config_manager() -> MagicMock:
     return mock
 
 
+class DummyAudioBackend(AbstractAudioBackend):
+    """Implement a dummy AbstractAudioBackend for testing coverage."""
+
+    def play_greeting(self) -> None:
+        """Simulate playing a greeting."""
+        super().play_greeting()
+
+    def start_recording(self, filename: str) -> None:
+        """Simulate starting a recording."""
+        super().start_recording(filename)
+
+    def stop_recording(self) -> None:
+        """Simulate stopping a recording."""
+        super().stop_recording()
+
+    def convert_to_mp3(self, input_wav: str, output_mp3: str) -> None:
+        """Simulate converting WAV to MP3."""
+        super().convert_to_mp3(input_wav, output_mp3)
+
+
+class TestAbstractAudioBackend:
+    """Tests for the AbstractAudioBackend to cover abstract methods."""
+
+    def test_abstract_methods_callable_for_coverage(self) -> None:
+        """Call abstract methods on a dummy subclass to cover `pass` statements."""
+        backend = DummyAudioBackend()
+        # These calls cover the `pass` statements in the abstract methods.
+        # No exception is expected here because the methods are defined with `pass`.
+        backend.play_greeting()
+        backend.start_recording("test.wav")
+        backend.stop_recording()
+        backend.convert_to_mp3("in.wav", "out.mp3")
+
+
 class TestAudioManager:
     """Tests for the AudioManager class."""
 
@@ -183,6 +217,22 @@ class TestAudioManager:
         # before re-raising the error from backend, or after a successful call.
         assert not am.is_recording
 
+    def test_stop_recording_backend_unexpected_error(
+        self, mock_audio_backend: MagicMock, mock_config_manager: MagicMock
+    ) -> None:
+        """Test stop_recording raises AudioError for unexpected backend errors."""
+        am = AudioManager(mock_audio_backend, mock_config_manager)
+        am.start_recording("test_message")  # Start recording first
+        assert am.is_recording
+
+        exc = Exception("Unexpected backend stop fail")
+        mock_audio_backend.stop_recording.side_effect = exc
+
+        with pytest.raises(AudioError, match="Failed to stop recording") as exc_info:
+            am.stop_recording()
+        assert exc_info.value.details == str(exc)
+        assert not am.is_recording  # Should still be set to False
+
     def test_convert_to_mp3_success(
         self, mock_audio_backend: MagicMock, mock_config_manager: MagicMock
     ) -> None:
@@ -212,6 +262,20 @@ class TestAudioManager:
         am = AudioManager(mock_audio_backend, mock_config_manager)
         with pytest.raises(AudioError, match="Conversion failed"):
             am.convert_to_mp3("input.wav", "output.mp3")
+
+    def test_convert_to_mp3_backend_unexpected_error(
+        self, mock_audio_backend: MagicMock, mock_config_manager: MagicMock
+    ) -> None:
+        """Test convert_to_mp3 raises AudioError for unexpected backend errors."""
+        am = AudioManager(mock_audio_backend, mock_config_manager)
+        exc = Exception("Unexpected backend conversion fail")
+        mock_audio_backend.convert_to_mp3.side_effect = exc
+
+        with pytest.raises(
+            AudioError, match="Failed to convert input.wav to MP3"
+        ) as exc_info:
+            am.convert_to_mp3("input.wav", "output.mp3")
+        assert exc_info.value.details == str(exc)
 
     def test_is_recording_property(
         self, mock_audio_backend: MagicMock, mock_config_manager: MagicMock
@@ -382,9 +446,12 @@ class TestPyAudioBackend:
         self.mock_pyaudio_module.PyAudio.side_effect = RuntimeError(
             "PyAudio init failed"
         )
-        backend._pyaudio_instance = None
-        with pytest.raises(AudioError, match="Failed to initialize PyAudio"):
+        backend._pyaudio_instance = None  # Ensure it tries to initialize
+        with pytest.raises(
+            AudioError, match="Failed to initialize PyAudio"
+        ) as exc_info:
             backend._initialize_pyaudio()
+        assert exc_info.value.details == "PyAudio init failed"
 
     def test_play_greeting_success(
         self, backend: PyAudioBackend, mock_config_manager: MagicMock
@@ -400,7 +467,7 @@ class TestPyAudioBackend:
         returned_segment_mock.sample_width = 2
         returned_segment_mock.channels = 1
         returned_segment_mock.frame_rate = 44100
-        returned_segment_mock.raw_data = b"dummy_raw_audio_data_chunk" * 5
+        returned_segment_mock.raw_data = b"d_chunk" * 20
 
         # The mock stream is returned by self.mock_pyaudio_instance.open()
         mock_stream = self.mock_pyaudio_instance.open.return_value
@@ -474,6 +541,67 @@ class TestPyAudioBackend:
         with pytest.raises(AudioError, match="Error playing greeting via PyAudio"):
             backend.play_greeting()
 
+    def test_play_greeting_stream_close_exception_in_finally(
+        self, backend: PyAudioBackend, mock_config_manager: MagicMock
+    ) -> None:
+        """Test play_greeting handles exceptions during stream close in finally."""
+        greeting_path = "sounds/greeting.wav"
+        mock_config_manager.audio.greeting_message_path = greeting_path
+
+        returned_segment_mock = self.mock_audio_segment_class.from_file.return_value
+        returned_segment_mock.sample_width = 2
+        returned_segment_mock.channels = 1
+        returned_segment_mock.frame_rate = 44100
+        returned_segment_mock.raw_data = b"d_chunk" * 20
+
+        mock_stream = self.mock_pyaudio_instance.open.return_value
+        mock_stream.stop_stream.side_effect = Exception(
+            "Failed to stop stream in finally"
+        )
+
+        # We don't expect an error to be raised from play_greeting itself,
+        # as the exception happens in finally. The error should be logged.
+        # We can check if stop_stream was called.
+        backend.play_greeting()
+        mock_stream.stop_stream.assert_called_once()
+        # Not testing logger output here, focusing on graceful handling.
+
+    def test_play_greeting_stream_becomes_none_mid_playback(
+        self, backend: PyAudioBackend, mock_config_manager: MagicMock
+    ) -> None:
+        """Test play_greeting handles stream becoming None during playback loop."""
+        greeting_path = "sounds/greeting.wav"
+        mock_config_manager.audio.greeting_message_path = greeting_path
+
+        returned_segment_mock = self.mock_audio_segment_class.from_file.return_value
+        returned_segment_mock.sample_width = 2
+        returned_segment_mock.channels = 1
+        returned_segment_mock.frame_rate = 44100
+        # Make raw_data long enough to enter the loop more than once if chunked
+        returned_segment_mock.raw_data = b"d_chunk" * 20
+
+        mock_stream = self.mock_pyaudio_instance.open.return_value
+
+        # Create a new mock to be the actual target of write operations
+        # within the side_effect, to avoid recursion.
+        actual_write_target_mock = MagicMock()
+
+        # Simulate stream becoming None after the first write
+        # The original mock_stream.write will call our side_effect.
+        # Our side_effect will then call actual_write_target_mock.
+        def write_side_effect_and_clear_stream(*args: Any, **kwargs: Any) -> None:
+            actual_write_target_mock(*args, **kwargs)  # Call the separate mock
+            backend._stream = None  # Simulate stream disappearing after one write
+
+        mock_stream.write.side_effect = write_side_effect_and_clear_stream
+
+        backend.play_greeting()
+
+        # Check that our actual_write_target_mock was called at least once
+        actual_write_target_mock.assert_called()
+        # The loop should break. stop_stream/close on a None stream (no error)
+        # is implicitly tested by no error being raised from play_greeting.
+
     def test_start_recording_success(
         self, backend: PyAudioBackend, mock_config_manager: MagicMock
     ) -> None:
@@ -529,6 +657,61 @@ class TestPyAudioBackend:
         )
         with pytest.raises(AudioError, match="Error starting recording via PyAudio"):
             backend.start_recording(self.DUMMY_WAV)
+        assert backend._stream is None
+
+    def test_start_recording_pyaudio_open_fails_then_close_fails(
+        self, backend: PyAudioBackend
+    ) -> None:
+        """Test start_recording handles PyAudio open & subsequent close failure."""
+        # To hit audio.py lines 383-384 (close fails in handler).
+        mocked_stream_for_failed_close = MagicMock(
+            spec=self.mock_pyaudio_module._Stream_spec_class
+        )
+        mocked_stream_for_failed_close.is_active.return_value = (
+            False  # stop_stream skipped
+        )
+        mocked_stream_for_failed_close.close.side_effect = Exception(
+            "Close fail in except"
+        )
+
+        def open_assigns_then_primary_fail(*args: Any, **kwargs: Any) -> Any:
+            backend._stream = mocked_stream_for_failed_close
+            raise Exception("Primary open failure")
+
+        self.mock_pyaudio_instance.open.side_effect = open_assigns_then_primary_fail
+
+        with pytest.raises(AudioError, match="Error starting recording via PyAudio"):
+            backend.start_recording(self.DUMMY_WAV)
+
+        mocked_stream_for_failed_close.close.assert_called_once()
+        assert backend._stream is None
+
+    def test_start_recording_pyaudio_open_fails_stream_active_close_succeeds(
+        self, backend: PyAudioBackend
+    ) -> None:
+        """Test start_recording: open fails, assigned stream is active & closes fine."""
+        # To hit audio.py lines 380 & 382 (stop and close succeed in handler).
+        mock_problem_stream = MagicMock(
+            spec=self.mock_pyaudio_module._Stream_spec_class
+        )
+        mock_problem_stream.is_active.return_value = True
+        mock_problem_stream.stop_stream.return_value = None
+        mock_problem_stream.close.return_value = None
+
+        def open_assigns_then_primary_fail_active(*args: Any, **kwargs: Any) -> Any:
+            backend._stream = mock_problem_stream
+            raise Exception("Primary open failure from mock")
+
+        self.mock_pyaudio_instance.open.side_effect = (
+            open_assigns_then_primary_fail_active
+        )
+
+        with pytest.raises(AudioError, match="Error starting recording via PyAudio"):
+            backend.start_recording(self.DUMMY_WAV)
+
+        mock_problem_stream.is_active.assert_called_once()
+        mock_problem_stream.stop_stream.assert_called_once()
+        mock_problem_stream.close.assert_called_once()
         assert backend._stream is None
 
     def test_recording_callback(self, backend: PyAudioBackend) -> None:
@@ -597,7 +780,7 @@ class TestPyAudioBackend:
 
         mock_inactive_stream.close.assert_called_once()
         assert backend._stream is None
-        self.mock_audio_segment_class.assert_not_called()
+        self.mock_audio_segment_class.assert_not_called()  # type: ignore [unreachable]
 
     def test_stop_recording_no_frames_recorded(self, backend: PyAudioBackend) -> None:
         """Test stop_recording does not save WAV if no frames were recorded."""
@@ -609,6 +792,35 @@ class TestPyAudioBackend:
         backend.stop_recording()
 
         self.mock_audio_segment_class.assert_not_called()
+        assert backend._current_recording_filename is None
+
+    def test_stop_recording_no_stream_but_frames_exist_saves_wav(
+        self, backend: PyAudioBackend, mock_config_manager: MagicMock
+    ) -> None:
+        """Test stop_recording saves WAV if _stream is None but _frames exist."""
+        backend._stream = None  # Explicitly no stream
+        backend._frames = [b"some", b"data"]
+        backend._current_recording_filename = self.DUMMY_WAV
+
+        record_settings = mock_config_manager.audio.recording
+
+        backend.stop_recording()
+
+        # Stream related mocks should not be called as stream is None
+        self.mock_pyaudio_instance.open().stop_stream.assert_not_called()
+        self.mock_pyaudio_instance.open().close.assert_not_called()
+
+        self.mock_audio_segment_class.assert_called_once_with(
+            data=b"somedata",
+            sample_width=record_settings.sample_width,
+            frame_rate=record_settings.rate,
+            channels=record_settings.channels,
+        )
+        mock_segment_instance = self.mock_audio_segment_class()
+        mock_segment_instance.export.assert_called_once_with(
+            self.DUMMY_WAV, format="wav"
+        )
+        assert not backend._frames
         assert backend._current_recording_filename is None
 
     def test_stop_recording_pydub_export_fails(self, backend: PyAudioBackend) -> None:
@@ -623,6 +835,51 @@ class TestPyAudioBackend:
             original_error_message
         )
 
+        expected_match = f"Unexpected error saving WAV file: {self.DUMMY_WAV}"
+        with pytest.raises(AudioError, match=expected_match) as exc_info:
+            backend.stop_recording()
+
+        assert exc_info.value.details == original_error_message
+        assert not backend._frames
+        assert backend._current_recording_filename is None
+
+    def test_stop_recording_pydub_export_ioerror(
+        self, backend: PyAudioBackend, mock_config_manager: MagicMock
+    ) -> None:
+        """Test stop_recording handles IOError during pydub WAV export."""
+        backend._stream = self.mock_pyaudio_instance.open()  # Mock stream presence
+        backend._stream.is_active.return_value = (
+            False  # Assume stopped or was never active
+        )
+        backend._frames = [b"data"]
+        backend._current_recording_filename = self.DUMMY_WAV
+
+        mock_segment_instance = self.mock_audio_segment_class()
+        original_error_message = "Export failed due to IOError"
+        mock_segment_instance.export.side_effect = IOError(original_error_message)
+
+        expected_match = f"Could not save WAV file: {self.DUMMY_WAV}"
+        with pytest.raises(AudioError, match=expected_match) as exc_info:
+            backend.stop_recording()
+
+        assert exc_info.value.details == original_error_message
+        assert not backend._frames  # Frames should be cleared
+        assert backend._current_recording_filename is None  # Filename cleared
+
+    def test_stop_recording_pydub_export_generic_exception(
+        self, backend: PyAudioBackend, mock_config_manager: MagicMock
+    ) -> None:
+        """Test stop_recording handles generic Exception during pydub WAV export."""
+        backend._stream = self.mock_pyaudio_instance.open()
+        backend._stream.is_active.return_value = False
+        backend._frames = [b"data"]
+        backend._current_recording_filename = self.DUMMY_WAV
+
+        mock_segment_instance = self.mock_audio_segment_class()
+        original_error_message = "Export failed due to generic Exception"
+        mock_segment_instance.export.side_effect = Exception(original_error_message)
+
+        # Match the more generic part of the message from audio.py
         expected_match = f"Unexpected error saving WAV file: {self.DUMMY_WAV}"
         with pytest.raises(AudioError, match=expected_match) as exc_info:
             backend.stop_recording()
@@ -647,26 +904,30 @@ class TestPyAudioBackend:
     def test_convert_to_mp3_success(
         self, backend: PyAudioBackend, mock_config_manager: MagicMock
     ) -> None:
-        """Test converting WAV to MP3 successfully."""
+        """Test converting WAV to MP3 successfully, including with ID3 tags."""
         conversion_settings = mock_config_manager.audio.conversion
+        # Add dummy ID3 tags to config for this test path
+        conversion_settings.id3_tags = {"artist": "Test Artist", "title": "Test Title"}
 
-        # No need to set from_wav.return_value here, fixture handles it.
-        # self.mock_audio_segment_class.from_wav will return instance_mock
-        # which has .export configured by the fixture.
+        # Ensure from_file mock is properly set up by the fixture
+        # self.mock_audio_segment_class.from_file will return an instance_mock
+        # whose .export is already a MagicMock.
 
         backend.convert_to_mp3(self.DUMMY_WAV, self.DUMMY_MP3)
 
         self.mock_audio_segment_class.from_file.assert_called_once_with(self.DUMMY_WAV)
 
-        # Get instance from from_file & check export (fixture mock)
         returned_segment_mock = self.mock_audio_segment_class.from_file.return_value
         returned_segment_mock.export.assert_called_once_with(
             self.DUMMY_MP3,
             format="mp3",
             bitrate=conversion_settings.mp3_bitrate,
             parameters=conversion_settings.ffmpeg_parameters,
-            tags=None,
+            tags=conversion_settings.id3_tags,  # Verify tags are passed
         )
+        # Reset id3_tags if it could affect other tests;
+        # fixtures usually isolate this.
+        # conversion_settings.id3_tags = None # Reset if needed
 
     def test_convert_to_mp3_file_not_found(self, backend: PyAudioBackend) -> None:
         """Test convert_to_mp3 raises FileNotFoundError if input WAV is not found."""
@@ -779,3 +1040,41 @@ class TestPyAudioBackend:
             pytest.fail(
                 "PyAudioBackend.__del__ raised an exception during error handling."
             )
+
+    def test_stop_recording_inactive_stream_close_exception(
+        self, backend: PyAudioBackend
+    ) -> None:
+        """Test stop_recording handles exception when closing an inactive stream."""
+        mock_inactive_stream = MagicMock(
+            spec=self.mock_pyaudio_module._Stream_spec_class
+        )
+        mock_inactive_stream.is_active.return_value = False
+        mock_inactive_stream.close.side_effect = Exception("Inactive close failed")
+        backend._stream = mock_inactive_stream
+        backend._frames = []  # No frames, so it should try to close
+
+        # Expect no error raised, but logged. Stream should be set to None.
+        backend.stop_recording()
+
+        mock_inactive_stream.close.assert_called_once()
+        assert backend._stream is None
+        self.mock_audio_segment_class.assert_not_called()  # type: ignore [unreachable]
+
+    def test_stop_recording_active_stream_stop_exception(
+        self, backend: PyAudioBackend, mock_config_manager: MagicMock
+    ) -> None:
+        """Test stop_recording handles exception from active stream.stop_stream()."""
+        mock_active_stream = self.mock_pyaudio_instance.open()
+        backend._stream = mock_active_stream
+        backend._stream.is_active.return_value = True
+        backend._frames = [b"someadata"]
+        backend._current_recording_filename = self.DUMMY_WAV
+
+        backend._stream.stop_stream.side_effect = Exception("Stop stream failed")
+
+        # Error is logged, not raised. WAV saving should still be attempted.
+        backend.stop_recording()
+
+        mock_active_stream.stop_stream.assert_called_once()
+        mock_active_stream.close.assert_called_once()
+        assert backend._stream is None
