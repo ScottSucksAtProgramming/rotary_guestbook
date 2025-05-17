@@ -96,3 +96,9 @@ This document outlines the core principles and practices we will adhere to while
 *   **Linting:** **Flake8** (max line length 88, enforced by pre-commit).
 *   **Modularity:** Strive for clear module separation as outlined in the project structure.
 *   **Configuration:** Use `ConfigManager` for accessing application settings.
+
+# Coding Guidelines (Update)
+
+- All configuration code must use Pydantic v2 models, with `@field_validator` for validation and `model_dump()` for serialization.
+- Any changes to configuration structure must be reflected in `config.yaml.example` and covered by unit tests to maintain 100% coverage.
+- No linter or deprecation warnings are allowed in configuration code.

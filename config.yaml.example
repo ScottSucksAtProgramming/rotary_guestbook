@@ -40,10 +40,9 @@ web:
   secret_key: "change_this_in_production"
   
   # Security settings
-  auth:
-    enabled: true
-    username: "admin"
-    password: "change_this_in_production"
+  auth_enabled: true
+  auth_username: "admin"
+  auth_password: "change_this_in_production"
 
 # Logging settings
 logging:
@@ -62,8 +61,7 @@ system:
   memory_usage_threshold: 80  # percentage
   
   # Archive settings
-  archive:
-    enabled: true
-    interval: 86400  # 24 hours in seconds
-    keep_local: true
-    backup_location: "backups" 
+  archive_enabled: true
+  archive_interval: 86400  # 24 hours in seconds
+  archive_keep_local: true
+  archive_backup_location: "backups" 

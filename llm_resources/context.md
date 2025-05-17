@@ -190,3 +190,11 @@ Sample `ci.yml` steps:
 * * *
 
 **This plan ensures any engineer can build, test, and maintain a production-grade, robust rotary phone audio guestbook with full docstring coverage, logging, error handling, and CI/CD best practices.**
+
+# Project Context (Update)
+
+- The configuration system (`config.py`) is now implemented using Pydantic v2 models for all sections (audio, hardware, web, logging, system).
+- All configuration is strictly validated at load time, and errors are reported clearly.
+- The example config file (`config.yaml.example`) matches the new structure and validation rules.
+- 100% test coverage for the configuration system, with comprehensive unit tests.
+- No linter or deprecation warnings remain for this module.

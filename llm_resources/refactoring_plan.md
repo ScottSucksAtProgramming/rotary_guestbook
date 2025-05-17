@@ -61,10 +61,13 @@ For each module below, follow this pattern:
 2.  **`src/rotary_guestbook/config.py` (ConfigManager):**
     *   **Goal:** Manage application configuration.
     *   **Implementation:**
-        *   [ ] Class `ConfigManager` to load settings from a YAML file (e.g., `config.yaml`).
-        *   [ ] Use Pydantic or dataclasses for typed configuration models to validate and provide easy access to settings.
-        *   [ ] Method to load config, perhaps with defaults from `config.yaml.example`.
-        *   [ ] Properties or methods to access specific configuration values.
+        *   [x] Uses Pydantic v2 models for all configuration sections (audio, hardware, web, logging, system)
+        *   [x] All validators use `@field_validator` (Pydantic v2 style)
+        *   [x] Configuration is loaded from YAML, validated, and exposed via properties
+        *   [x] Saving uses `model_dump()` for compatibility with Pydantic v2
+        *   [x] 100% test coverage with comprehensive unit tests
+        *   [x] No linter or deprecation warnings
+        *   [x] Example config file (`config.yaml.example`) updated to match new structure
     *   **Testing (`tests/unit/test_config.py`):**
         *   [ ] Test loading valid and invalid config files.
         *   [ ] Test default value handling.
@@ -218,30 +221,4 @@ For each module below, follow this pattern:
     *   [ ] Configure Sphinx (`conf.py`) to use `autodoc` to pull from docstrings.
     *   [ ] Build docs: `cd docs && make html`.
 
-2.  **Packaging (`setup.cfg`, `pyproject.toml`):**
-    *   [ ] Ensure metadata for packaging is complete.
-    *   [ ] Test building a wheel: `python -m build`.
-
-3.  **`start.sh` Script:**
-    *   [x] Activates virtual environment (if applicable).
-    *   [x] Navigates to the project directory.
-    *   [x] Runs the main application (`python -m src.rotary_guestbook.app` or similar if you make `app.py` executable and add a `if __name__ == "__main__":` block).
-
-4.  **Final CI/CD Polish:**
-    *   [ ] Ensure `pytest --cov=rotary_guestbook --cov-fail-under=90` (or your target) passes.
-    *   [ ] Ensure `interrogate --min-coverage 100` passes.
-    *   [ ] Consider adding a step to build and publish docs to GitHub Pages.
-    *   [ ] Consider adding a release workflow (tagging, building wheel, publishing to PyPI).
-
-**Throughout the process:**
-
-*   [x] **Commit frequently** with clear messages.
-*   [x] **Run pre-commit hooks** before each commit.
-*   [x] **Run tests** often.
-*   [x] **Refactor within modules** as you go if you see opportunities for improvement (e.g., breaking down large methods, improving clarity) that don't require changing interfaces yet.
-
-This is a comprehensive plan. We'll take it step-by-step.
-
-Since `src/rotary_guestbook/` doesn't exist, our immediate first step is **Phase 0: Project Setup & CI Foundation**.
-
-Would you like to start by creating the basic directory structure and some of the initial configuration files like `pyproject.toml` and `.pre-commit-config.yaml`? I can guide you on the content for those.
+2.  **Packaging (`
