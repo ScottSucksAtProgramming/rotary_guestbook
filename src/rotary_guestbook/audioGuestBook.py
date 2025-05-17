@@ -3,7 +3,6 @@
 Handles audio recording, playback, and state management for the Rotary Phone Guestbook.
 """
 
-import asyncio
 import logging
 import os
 import sys
@@ -241,7 +240,10 @@ class AudioGuestBook:
         """
         Handles the event when the recording time exceeds the limit.
         """
-        logger.info("Recording time exceeded. Stopping recording.")
+        try:
+            logger.info("Recording time exceeded. Stopping recording.")
+        except ValueError:  # Suppress I/O operation on closed file in threads
+            pass
         self.audio_interface.stop_recording()
         self.audio_interface.play_audio(
             self.config["time_exceeded"], self.config["time_exceeded_volume"], 0

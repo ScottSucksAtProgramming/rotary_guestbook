@@ -63,7 +63,7 @@ def mock_button():
 
 
 @pytest.fixture
-def guest_book(mock_config, tmp_path, mock_audio_interface, mock_button):
+def guest_book(mock_config, tmp_path, mock_audio_interface, mock_button, request):
     """Create an AudioGuestBook instance with test configuration."""
     # Create a temporary config file
     config_path = tmp_path / "config.yaml"
@@ -73,7 +73,14 @@ def guest_book(mock_config, tmp_path, mock_audio_interface, mock_button):
     # The AudioGuestBook will pick up the mocks when it tries to import Button
     # and AudioInterface, because the mock_audio_interface and mock_button
     # fixtures have already patched them.
-    return AudioGuestBook(str(config_path))
+    gb_instance = AudioGuestBook(str(config_path))
+
+    def finalizer():
+        # Ensure all threads and timers are stopped
+        gb_instance.stop_recording_and_playback()
+
+    request.addfinalizer(finalizer)
+    return gb_instance
 
 
 def test_init(guest_book, mock_config):
@@ -568,10 +575,12 @@ def test_stop_recording_and_playback_greeting_thread_alive(
     mock_audio_interface.playback_process = None
     guest_book.timer = None
     thread = MagicMock()
-    thread.is_alive.side_effect = [True, False]
+    # is_alive: First call in explicit stop (True), second call after join (False),
+    # then for finalizer call (False)
+    thread.is_alive.side_effect = [True, False, False]
     guest_book.greeting_thread = thread
-    guest_book.stop_recording_and_playback()
-    thread.join.assert_called_once()
+    guest_book.stop_recording_and_playback()  # Explicit call for the test logic
+    thread.join.assert_called_once()  # Asserts join was called in the explicit stop
 
 
 def test_stop_recording_and_playback_greeting_thread_not_alive(
