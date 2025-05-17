@@ -90,12 +90,12 @@ For each module below, follow this pattern:
 1.  **`src/rotary_guestbook/app.py` (AppController - Initial Skeleton):**
     *   **Goal:** Application entry point and orchestrator.
     *   **Implementation (Initial):**
-        *   [ ] Define `AppController` class.
-        *   [ ] Constructor `__init__` should type hint dependencies: `ConfigManager`, and placeholders for `PhoneEventHandler`, `AudioManager`, etc.
-        *   [ ] Implement a basic `run()` method that, for now, might just initialize dependencies and log that it's starting.
+        *   [x] Define `AppController` class.
+        *   [x] Constructor `__init__` should type hint dependencies: `ConfigManager`, and placeholders for `PhoneEventHandler`, `AudioManager`, etc.
+        *   [x] Implement a basic `run()` method that, for now, might just initialize dependencies and log that it's starting.
     *   **Testing (`tests/unit/test_app.py`):**
-        *   [ ] Test `AppController` instantiation with mocked dependencies.
-        *   [ ] Test the basic `run()` method (e.g., ensure it calls a `start()` method on a mock service).
+        *   [x] Test `AppController` instantiation with mocked dependencies.
+        *   [x] Test the basic `run()` method (e.g., ensure it calls a `start()` method on a mock service).
 
 2.  **Define Core Interfaces (Abstract Base Classes - ABCs):**
     *   Based on `context.md` and potential needs, create ABCs in appropriate files or a new `interfaces.py` if preferred.
