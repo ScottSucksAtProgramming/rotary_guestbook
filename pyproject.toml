@@ -1,5 +1,5 @@
 [project]
-name = "rotary-phone-audio-guestbook"
+name = "rotary_guestbook"
 version = "0.1.0"
 description = "This project transforms a rotary phone into a voice recorder for use at special events (i.e. wedding audio guestbook, etc.)."
 readme = "README.md"

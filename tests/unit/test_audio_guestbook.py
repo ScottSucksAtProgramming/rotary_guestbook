@@ -5,7 +5,7 @@ import pytest
 import yaml
 from pathlib import Path
 
-from audioGuestBook import AudioGuestBook, CurrentEvent
+from rotary_guestbook.audioGuestBook import AudioGuestBook, CurrentEvent
 
 
 @pytest.fixture
@@ -47,14 +47,14 @@ def mock_audio_interface():
     """Create a mock AudioInterface instance."""
     # Reverting to simple MagicMock as autospec didn't solve the main issue
     # and complicated test_init.
-    with patch("audioGuestBook.AudioInterface") as mock_class:
+    with patch("rotary_guestbook.audioGuestBook.AudioInterface") as mock_class:
         yield mock_class.return_value
 
 
 @pytest.fixture
 def mock_button():
     """Create a mock Button CLASS and yield it."""
-    with patch("audioGuestBook.Button") as mock_class:
+    with patch("rotary_guestbook.audioGuestBook.Button") as mock_class:
         # The code under test will call mock_class() to get an instance.
         # That instance (mock_class.return_value) will be a MagicMock
         # by default. Attributes like .when_pressed are set by the code

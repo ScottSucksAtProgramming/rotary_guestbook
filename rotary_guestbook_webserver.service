@@ -5,8 +5,8 @@ After=network.target
 [Service]
 User=admin
 Group=admin
-WorkingDirectory=/home/admin/rotary-phone-audio-guestbook
-ExecStart=/home/admin/rotary-phone-audio-guestbook/start_server.sh
+WorkingDirectory=/home/admin/rotary_guestbook
+ExecStart=/home/admin/rotary_guestbook/start_server.sh
 Restart=always
 
 [Install]

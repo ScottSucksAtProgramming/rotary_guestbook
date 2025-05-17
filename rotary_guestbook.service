@@ -3,10 +3,10 @@ Description=Rotary Phone Guest Book Project
 After=multi-user.target
 
 [Service]
-WorkingDirectory=/home/admin/rotary-phone-audio-guestbook
+WorkingDirectory=/home/admin/rotary_guestbook
 Type=simple
 Restart=always
-ExecStart=/usr/bin/python3 src/audioGuestBook.py
+ExecStart=/usr/bin/python3 src/guestbook/audioGuestBook.py
 
 [Install]
 WantedBy=multi-user.target
