@@ -1,85 +1,75 @@
 # Rotary Phone Audio Guestbook
 
-This project transforms a rotary phone into a voice recorder for special events such as a wedding audio guestbook.
+A production-grade rotary phone audio guestbook system that allows users to leave voice messages through a classic rotary dial telephone interface.
 
-![image](images/final_result_2.jpg)
+## Features
 
-- [Rotary Phone Audio Guestbook](#rotary-phone-audio-guestbook)
-  - [Background](#background)
-  - [Materials](#materials)
-  - [Setup](#setup)
-    - [Prepare Your Rotary Phone](#prepare-your-rotary-phone)
-    - [Download and Install the Custom Image](#download-and-install-the-custom-image)
-    - [Initial Configuration](#initial-configuration)
-  - [Software](#software)
-  - [Development](#development)
-  - [Support](#support)
-  - [Star History](#star-history)
+- Interactive audio experience with vintage rotary phone interface
+- Digital recording and storage of voice messages
+- Web interface for message playback and system status
+- Robust error handling and logging
+- Comprehensive testing coverage
+- Production-grade architecture following SOLID principles
 
-## Background
+## Requirements
 
-Inspired by my upcoming wedding, I created a DIY audio guestbook using a rotary phone. After finding that commercial rentals charged high fees without offering custom voicemail options, I developed this affordable and customizable solution. This guide will help you create your own audio guestbook.
+- Python 3.10 or higher
+- Raspberry Pi (tested on Raspberry Pi OS Bullseye or later)
+- Rotary phone hardware (see `docs/hardware.md` for wiring details)
 
-## [Materials](docs/materials.md)
+## Installation
 
-## Setup
-
-### Prepare Your Rotary Phone
-
-1. Follow the [Hardware](docs/hardware.md) section for detailed instructions on wiring your rotary phone to the Raspberry Pi.
-
-_Note: This is a crucial first step before proceeding to software installation._
-
-### Download and Install the Custom Image
-
-With your hardware prepared, install the custom Raspberry Pi image that contains all necessary software:
-
-1. Download the [latest release](https://github.com/nickpourazima/rotary-phone-audio-guestbook/releases)
-2. Extract the .gz file: `gunzip rpizero_rotary_phone_audio_guestbook_v<latest>_imagebackup.img.gz`
-3. Flash the image to an SD card using Raspberry Pi Imager or BalenaEtcher:
-
-   <img src="images/rpi_imager_custom.png" width="50%" height="50%">
-
-4. Configure the following credentials when prompted:
+1. Clone the repository:
    ```bash
-   username: admin
-   password: password
+   git clone https://github.com/scottkostolni/rotary_guestbook.git
+   cd rotary_guestbook
    ```
-5. Set up your WiFi network connection
-6. Insert the SD card into your Raspberry Pi and power it on
 
-### Initial Configuration
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
 
-Once you've completed the hardware setup and installed the image:
+3. Install the package in development mode:
+   ```bash
+   pip install -e ".[dev]"
+   ```
 
-1. Boot up your Raspberry Pi and allow it a minute to initialize
-2. Navigate to `<RPI_IP>:8080` in a web browser to access the control interface:
+4. Install pre-commit hooks:
+   ```bash
+   pre-commit install
+   ```
 
-   ![image](images/webserver_home_light_no_recordings.png)
+5. Copy the example configuration:
+   ```bash
+   cp config.yaml.example config.yaml
+   ```
 
-3. Visit the Settings page to customize your configuration:
+6. Edit `config.yaml` with your settings.
 
-   ![image](images/webserver_settings_light.png)
+## Usage
 
-Your audio guest book is now ready for test/deployment! For advanced configuration options and detailed explanations of all settings, refer to the [Configuration](docs/configuration.md) documentation.
+1. Start the application:
+   ```bash
+   ./start.sh
+   ```
 
-## [Software](docs/software.md)
+2. Access the web interface at `http://localhost:5000`
 
-## [Development](docs/development.md)
+## Development
 
-## Support
+- Run tests: `pytest`
+- Check code style: `pre-commit run --all-files`
+- Build documentation: `cd docs && make html`
 
-It's great to see this project growing. Special thanks to @svartis, @jmdevita, and @Mevel!
+## Documentation
 
-If this code helped you or if you have feedback, I'd be happy to [hear about it](mailto:dillpicholas@duck.com)!
-Feel like saying thanks? You can [buy me a coffee](https://ko-fi.com/dillpicholas)☕.
+- [Hardware Setup](docs/hardware.md)
+- [Software Architecture](docs/software.md)
+- [Configuration Guide](docs/configuration.md)
+- [Development Guide](docs/development.md)
 
-## Star History
+## License
 
-<a href="https://star-history.com/#nickpourazima/rotary-phone-audio-guestbook&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=nickpourazima/rotary-phone-audio-guestbook&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=nickpourazima/rotary-phone-audio-guestbook&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=nickpourazima/rotary-phone-audio-guestbook&type=Date" />
- </picture>
-</a>
+MIT License - see LICENSE file for details
