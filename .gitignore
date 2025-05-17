@@ -17,3 +17,4 @@ test/**/*.wav
 # Test artifacts
 dummy.mp3
 dummy.wav
+.coverage
