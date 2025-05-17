@@ -364,12 +364,13 @@ class MessageArchiver:
             ArchiveError: If any error occurs during the archiving process.
         """
         try:
+            temp_file = Path(temp_audio_path)
+            if not temp_file.exists():
+                raise ArchiveError(f"Audio file not found: {temp_audio_path}")
+
             unique_filename = self.create_unique_filename(extension=audio_format)
             timestamp = datetime.now().isoformat()
-            file_size = 0
-            temp_file = Path(temp_audio_path)
-            if temp_file.exists():
-                file_size = temp_file.stat().st_size
+            file_size = temp_file.stat().st_size
 
             metadata: Dict[str, Any] = {
                 "filename": unique_filename,
@@ -390,13 +391,6 @@ class MessageArchiver:
                 f"ID: {message_id}"
             )
             return message_id
-        except FileNotFoundError as e:
-            logger.error(
-                f"Audio file not found during archiving: {temp_audio_path} - {e}"
-            )
-            raise ArchiveError(
-                f"Audio file not found: {temp_audio_path}", details=str(e)
-            ) from e
         except ArchiveError:  # Re-raise if it's already an ArchiveError
             raise
         except Exception as e:
@@ -426,12 +420,3 @@ class MessageArchiver:
         """
         logger.debug("Listing all messages.")
         return self._storage_backend.list_messages()
-
-
-# Placeholder for MessageArchiver and concrete backend implementation
-# which will be added in Phase 3.
-# class MessageArchiver:
-#     pass
-
-# class FileSystemStorageBackend(AbstractStorageBackend):
-#     pass
