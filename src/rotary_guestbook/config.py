@@ -20,7 +20,10 @@ Example:
     ```
 """
 
+import os
+import warnings
 from pathlib import Path
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 from ruamel.yaml import YAML
@@ -28,78 +31,54 @@ from ruamel.yaml import YAML
 from rotary_guestbook.errors import ConfigError
 
 
+class RecordingSettings(BaseModel):
+    """Settings related to audio recording parameters."""
+
+    input_device_index: Optional[int] = None  # PyAudio device index
+    channels: int = Field(default=1, ge=1, le=2)
+    rate: int = Field(default=44100, ge=8000, le=192000)
+    sample_width: int = Field(
+        default=2, ge=1, le=4
+    )  # Bytes per sample (e.g., 2 for 16-bit)
+    chunk_size: int = Field(default=1024, ge=256, le=8192)
+    # Removed format from here as it's more global or tied to PyAudio format getter
+    max_duration_seconds: int = Field(
+        default=180, ge=10, le=600
+    )  # Max recording length
+    # Silence detection parameters could also go here if complex enough
+
+
+class ConversionSettings(BaseModel):
+    """Settings related to audio file conversion, e.g., to MP3."""
+
+    mp3_bitrate: str = "192k"
+    # Example: ["-ac", "1"] for mono, ["-q:a", "5"] for VBR quality
+    ffmpeg_parameters: Optional[List[str]] = None
+
+
 class AudioSettings(BaseModel):
     """Audio configuration settings.
 
-    This model defines all audio-related configuration parameters including
-    device settings, recording parameters, and file format settings.
-
-    Attributes:
-        input_device: The input audio device name or "default"
-        output_device: The output audio device name or "default"
-        sample_rate: Audio sample rate in Hz
-        channels: Number of audio channels (1 for mono, 2 for stereo)
-        chunk_size: Size of audio chunks for processing
-        format: Audio format (e.g., "int16")
-        max_recording_time: Maximum recording duration in seconds
-        min_recording_time: Minimum recording duration in seconds
-        silence_threshold: Threshold for silence detection
-        silence_duration: Duration of silence to trigger end of recording
-        recording_format: Output file format (e.g., "mp3")
-        bitrate: Audio bitrate for compressed formats
-        output_directory: Directory for saving recordings
+    Defines audio-related parameters like devices, recording, and formats.
     """
 
-    input_device: str = "default"
-    output_device: str = "default"
-    sample_rate: int = Field(default=44100, ge=8000, le=192000)
-    channels: int = Field(default=1, ge=1, le=2)
-    chunk_size: int = Field(default=1024, ge=256, le=8192)
-    format: str = "int16"
-    max_recording_time: int = Field(default=300, ge=1, le=3600)
+    output_device_index: Optional[int] = None
+    greeting_message_path: Optional[str] = None
     min_recording_time: int = Field(default=3, ge=1, le=60)
     silence_threshold: float = Field(default=0.01, ge=0.0, le=1.0)
     silence_duration: int = Field(default=2, ge=1, le=10)
-    recording_format: str = "mp3"
-    bitrate: str = "128k"
     output_directory: str = "recordings"
+    recording: RecordingSettings = Field(default_factory=RecordingSettings)
+    conversion: ConversionSettings = Field(default_factory=ConversionSettings)
 
-    @field_validator("format")
+    @field_validator("output_directory")
     @classmethod
-    def validate_format(cls, v: str) -> str:
-        """Validate the audio format.
-
-        Args:
-            v: The format string to validate
-
-        Returns:
-            The validated format string
-
-        Raises:
-            ValueError: If the format is not supported
-        """
-        valid_formats = ["int16", "int24", "int32", "float32"]
-        if v not in valid_formats:
-            raise ValueError(f"Unsupported audio format: {v}")
-        return v
-
-    @field_validator("recording_format")
-    @classmethod
-    def validate_recording_format(cls, v: str) -> str:
-        """Validate the recording format.
-
-        Args:
-            v: The format string to validate
-
-        Returns:
-            The validated format string
-
-        Raises:
-            ValueError: If the format is not supported
-        """
-        valid_formats = ["mp3", "wav", "ogg"]
-        if v not in valid_formats:
-            raise ValueError(f"Unsupported recording format: {v}")
+    def validate_output_directory(cls, v: str) -> str:
+        """Ensure output_directory is a non-empty relative path."""
+        if not isinstance(v, str) or not v:
+            raise ValueError("output_directory must be a non-empty string")
+        if os.path.isabs(v):
+            raise ValueError("output_directory must be a relative path")
         return v
 
 
@@ -249,12 +228,9 @@ class ConfigManager:
         config: The validated configuration object
         yaml: YAML parser instance
 
-    Example:
-        ```python
-        config_manager = ConfigManager("config.yaml")
-        print(f"Sample rate: {config_manager.audio.sample_rate}")
-        print(f"Web port: {config_manager.web.port}")
-        ```
+    Note:
+        The methods `get_audio_config`, `get_hardware_config`, etc., are
+        deprecated. Use the respective properties (`.audio`, `.hardware`) instead.
     """
 
     def __init__(self, config_path: str) -> None:
@@ -271,14 +247,7 @@ class ConfigManager:
         self.config = self._load_config()
 
     def _load_config(self) -> Config:
-        """Load and validate the configuration from the YAML file.
-
-        Returns:
-            The validated configuration object
-
-        Raises:
-            ConfigError: If the configuration file cannot be loaded or validated
-        """
+        """Load configuration from the YAML file and validate it."""
         try:
             if not self.config_path.exists():
                 raise ConfigError(
@@ -304,11 +273,7 @@ class ConfigManager:
             )
 
     def save_config(self) -> None:
-        """Save the current configuration to the YAML file.
-
-        Raises:
-            ConfigError: If the configuration cannot be saved
-        """
+        """Save the current configuration back to the YAML file."""
         try:
             config_dict = self.config.model_dump()
             with self.config_path.open("w") as f:
@@ -321,45 +286,40 @@ class ConfigManager:
 
     @property
     def audio(self) -> AudioSettings:
-        """Get the audio configuration settings.
+        """Get the audio configuration settings."""
+        return self.config.audio
 
-        Returns:
-            The audio settings object
-        """
+    # Adding get_audio_config for compatibility with existing audio.py,
+    # but mark as deprecated
+    def get_audio_config(self) -> AudioSettings:
+        """Return the audio configuration settings (DEPRECATED: use .audio property)."""
+        message = (
+            "ConfigManager.get_audio_config() is deprecated. "
+            "Use .audio property instead."
+        )
+        warnings.warn(
+            message,
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.config.audio
 
     @property
     def hardware(self) -> HardwareSettings:
-        """Get the hardware configuration settings.
-
-        Returns:
-            The hardware settings object
-        """
+        """Get the hardware configuration settings."""
         return self.config.hardware
 
     @property
     def web(self) -> WebSettings:
-        """Get the web interface configuration settings.
-
-        Returns:
-            The web settings object
-        """
+        """Get the web interface configuration settings."""
         return self.config.web
 
     @property
     def logging(self) -> LoggingSettings:
-        """Get the logging configuration settings.
-
-        Returns:
-            The logging settings object
-        """
+        """Get the logging configuration settings."""
         return self.config.logging
 
     @property
     def system(self) -> SystemSettings:
-        """Get the system configuration settings.
-
-        Returns:
-            The system settings object
-        """
+        """Get the system configuration settings."""
         return self.config.system
