@@ -107,7 +107,8 @@ class AudioGuestBook:
 
         # Log the configuration for debugging
         logger.info(
-            f"Hook setup: GPIO={hook_gpio}, type={hook_type}, invert={invert_hook}, bounce_time={bounce_time}"
+            f"Hook setup: GPIO={hook_gpio}, type={hook_type}, "
+            f"invert={invert_hook}, bounce_time={bounce_time}"
         )
 
         pull_up = hook_type == "NC"
@@ -189,7 +190,8 @@ class AudioGuestBook:
         recordings_path = Path(self.config["recordings_path"])
         logger.info(f"Recording directory exists: {recordings_path.exists()}")
         logger.info(
-            f"Recording directory is writable: {os.access(str(recordings_path), os.W_OK)}"
+            f"Recording directory is writable: "
+            f"{os.access(str(recordings_path), os.W_OK)}"
         )
 
         include_beep = bool(self.config["beep_include_in_message"])

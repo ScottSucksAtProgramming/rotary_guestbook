@@ -498,4 +498,94 @@ def test_setup_shutdown_button_disabled(guest_book, mock_button):
     mock_button.assert_not_called()
 
 
+def test_init_creates_recordings_dir(
+    tmp_path, mock_config, mock_audio_interface, mock_button
+):
+    """Test __init__ creates the recordings directory if it does not exist."""
+    recordings_path = tmp_path / "recordings"
+    mock_config["recordings_path"] = str(recordings_path)
+    config_path = tmp_path / "config.yaml"
+    with open(config_path, "w") as f:
+        yaml.dump(mock_config, f)
+    with patch("rotary_guestbook.audioGuestBook.AudioInterface"):
+        assert not recordings_path.exists()
+        AudioGuestBook(str(config_path))
+        assert recordings_path.exists()
+
+
+def test_shutdown_calls_os_system(guest_book):
+    """Test shutdown method calls os.system."""
+    with patch("os.system") as mock_system:
+        guest_book.shutdown()
+        mock_system.assert_called_once_with("sudo shutdown now")
+
+
+def test_stop_recording_and_playback_no_recording(guest_book, mock_audio_interface):
+    """Test stop_recording_and_playback when no active recording process."""
+    mock_audio_interface.recording_process = None
+    mock_audio_interface.playback_process = MagicMock()
+    guest_book.stop_recording_and_playback()
+    mock_audio_interface.stop_playback.assert_called_once()
+
+
+def test_stop_recording_and_playback_no_playback(guest_book, mock_audio_interface):
+    """Test stop_recording_and_playback when no active playback process."""
+    mock_audio_interface.recording_process = MagicMock()
+    mock_audio_interface.playback_process = None
+    guest_book.stop_recording_and_playback()
+    mock_audio_interface.stop_recording.assert_called_once()
+
+
+def test_stop_recording_and_playback_timer_alive(guest_book, mock_audio_interface):
+    """Test stop_recording_and_playback cancels and joins timer if alive."""
+    mock_audio_interface.recording_process = None
+    mock_audio_interface.playback_process = None
+    timer = MagicMock()
+    timer.is_alive.side_effect = [True, False]
+    guest_book.timer = timer
+    guest_book.stop_recording_and_playback()
+    timer.cancel.assert_called_once()
+    timer.join.assert_called_once()
+    assert guest_book.timer is None
+
+
+def test_stop_recording_and_playback_timer_not_alive(guest_book, mock_audio_interface):
+    """Test stop_recording_and_playback sets timer to None if not alive."""
+    mock_audio_interface.recording_process = None
+    mock_audio_interface.playback_process = None
+    timer = MagicMock()
+    timer.is_alive.return_value = False
+    guest_book.timer = timer
+    guest_book.stop_recording_and_playback()
+    assert guest_book.timer is None
+
+
+def test_stop_recording_and_playback_greeting_thread_alive(
+    guest_book, mock_audio_interface
+):
+    """Test stop_recording_and_playback joins greeting thread if alive."""
+    mock_audio_interface.recording_process = None
+    mock_audio_interface.playback_process = None
+    guest_book.timer = None
+    thread = MagicMock()
+    thread.is_alive.side_effect = [True, False]
+    guest_book.greeting_thread = thread
+    guest_book.stop_recording_and_playback()
+    thread.join.assert_called_once()
+
+
+def test_stop_recording_and_playback_greeting_thread_not_alive(
+    guest_book, mock_audio_interface
+):
+    """Test stop_recording_and_playback does not join greeting thread if not alive."""
+    mock_audio_interface.recording_process = None
+    mock_audio_interface.playback_process = None
+    guest_book.timer = None
+    thread = MagicMock()
+    thread.is_alive.return_value = False
+    guest_book.greeting_thread = thread
+    guest_book.stop_recording_and_playback()
+    thread.join.assert_not_called()
+
+
 # End of tests
