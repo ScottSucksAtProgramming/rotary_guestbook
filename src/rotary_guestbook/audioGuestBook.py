@@ -1,5 +1,9 @@
-#! /usr/bin/env python3
+"""Core an_audio_guest_book_application_logic.
 
+Handles audio recording, playback, and state management for the Rotary Phone Guestbook.
+"""
+
+import asyncio
 import logging
 import os
 import sys

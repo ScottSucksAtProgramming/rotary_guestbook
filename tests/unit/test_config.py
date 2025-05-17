@@ -22,19 +22,20 @@ Example:
     ```
 """
 
-import pytest
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 from unittest.mock import patch
 
+import pytest
+
 from rotary_guestbook.config import (
-    ConfigManager,
-    Config,
     AudioSettings,
+    Config,
+    ConfigManager,
     HardwareSettings,
-    WebSettings,
     LoggingSettings,
     SystemSettings,
+    WebSettings,
 )
 from rotary_guestbook.errors import ConfigError
 

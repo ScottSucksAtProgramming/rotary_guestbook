@@ -9,13 +9,13 @@ audio:
   channels: 1
   chunk_size: 1024
   format: "int16"
-  
+
   # Recording settings
   max_recording_time: 300  # seconds
   min_recording_time: 3  # seconds
   silence_threshold: 0.01
   silence_duration: 2  # seconds
-  
+
   # File settings
   recording_format: "mp3"
   bitrate: "128k"
@@ -27,7 +27,7 @@ hardware:
   hook_switch_pin: 17
   rotary_pulse_pin: 27
   rotary_dial_pin: 22
-  
+
   # Debounce settings (milliseconds)
   hook_switch_debounce: 50
   rotary_pulse_debounce: 10
@@ -38,7 +38,7 @@ web:
   port: 5000
   debug: false
   secret_key: "change_this_in_production"
-  
+
   # Security settings
   auth_enabled: true
   auth_username: "admin"
@@ -59,9 +59,9 @@ system:
   disk_space_threshold: 90  # percentage
   cpu_usage_threshold: 80  # percentage
   memory_usage_threshold: 80  # percentage
-  
+
   # Archive settings
   archive_enabled: true
   archive_interval: 86400  # 24 hours in seconds
   archive_keep_local: true
-  archive_backup_location: "backups" 
+  archive_backup_location: "backups"

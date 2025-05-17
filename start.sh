@@ -6,4 +6,4 @@ if [ -d ".venv" ]; then
 fi
 
 # Run the application
-python -m src.guestbook.app 
+python -m src.guestbook.app

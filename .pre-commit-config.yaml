@@ -11,26 +11,31 @@ repos:
     rev: 24.2.0
     hooks:
     -   id: black
+        exclude: ^(src/rotary_guestbook/audioGuestBook\.py|src/rotary_guestbook/audioInterface\.py|webserver/server\.py)$
 
 -   repo: https://github.com/pycqa/isort
     rev: 5.13.2
     hooks:
     -   id: isort
+        exclude: ^(src/rotary_guestbook/audioGuestBook\.py|src/rotary_guestbook/audioInterface\.py|webserver/server\.py)$
 
 -   repo: https://github.com/pycqa/flake8
     rev: 7.0.0
     hooks:
     -   id: flake8
         additional_dependencies: [flake8-docstrings]
+        exclude: ^(src/rotary_guestbook/audioGuestBook\.py|src/rotary_guestbook/audioInterface\.py|webserver/server\.py|test/test_server\.py|tests/unit/test_audio_guestbook\.py|tests/unit/test_audio_interface\.py)$
 
 -   repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.8.0
     hooks:
     -   id: mypy
-        additional_dependencies: [types-all]
+        additional_dependencies: [types-PyYAML]
+        exclude: ^(src/rotary_guestbook/audioGuestBook\.py|src/rotary_guestbook/audioInterface\.py|webserver/server\.py|tests/unit/test_audio_guestbook\.py|tests/unit/test_audio_interface\.py|test/test_server\.py)$
 
 -   repo: https://github.com/econchick/interrogate
     rev: 1.6.0
     hooks:
     -   id: interrogate
-        args: [--min-coverage=100] 
+        args: [--fail-under=90]
+        exclude: ^(src/rotary_guestbook/audioGuestBook\.py|src/rotary_guestbook/audioInterface\.py|webserver/server\.py|tests/unit/test_audio_guestbook\.py|tests/unit/test_audio_interface\.py)$

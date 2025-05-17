@@ -1,3 +1,8 @@
+"""Flask web server for the Rotary Guestbook application.
+
+Provides a web interface for managing recordings and system settings.
+"""
+
 import io
 import logging
 import os
@@ -94,6 +99,7 @@ def normalize_path(path):
 
 @app.route("/")
 def index():
+    """Render the main page with a list of recordings."""
     return render_template("index.html")
 
 
@@ -105,7 +111,7 @@ def download_file(filename):
 
 @app.route("/delete/<filename>", methods=["POST"])
 def delete_file(filename):
-    """Delete a specific recording."""
+    """Delete a specific recording file."""
     file_path = recordings_path / filename
     try:
         file_path.unlink()
@@ -119,7 +125,7 @@ def delete_file(filename):
 
 @app.route("/api/recordings")
 def get_recordings():
-    """API route to get a list of all recordings."""
+    """Return a list of available recordings."""
     try:
         # List directory contents if it exists
         if recordings_path.exists() and recordings_path.is_dir():
@@ -179,7 +185,8 @@ def edit_config():
             except subprocess.CalledProcessError as e:
                 logger.error(f"Failed to restart audioGuestBook service: {e}")
                 flash(
-                    "Configuration updated but failed to restart service. Please restart manually.",
+                    "Configuration updated but failed to restart service. "
+                    "Please restart manually.",
                     "warning",
                 )
 
@@ -255,7 +262,7 @@ def serve_recording(filename):
 
 
 def generate_file_chunks(file_path, byte1=0, byte2=None):
-    """Generator to stream file in chunks with range support."""
+    """Stream a file in chunks with range support."""
     with open(file_path, "rb") as f:
         f.seek(byte1)
         while True:
@@ -391,7 +398,8 @@ def update_config(form_data):
 
         # Log the conversion attempt
         logger.info(
-            f"Updating '{key}': {config.get(key, 'Not set')} (type: {type(config.get(key, '')).__name__}) → '{value}'"
+            f"Updating '{key}': {config.get(key, 'Not set')} "
+            f"(type: {type(config.get(key, '')).__name__}) → '{value}'"
         )
 
         try:
@@ -410,7 +418,8 @@ def update_config(form_data):
 
             # Verify the conversion worked
             logger.info(
-                f"Updated '{key}' to: {config[key]} (type: {type(config[key]).__name__})"
+                f"Updated '{key}' to: {config[key]} "
+                f"(type: {type(config[key]).__name__})"
             )
 
         except (ValueError, TypeError) as e:

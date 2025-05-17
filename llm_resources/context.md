@@ -5,17 +5,17 @@ The Rotary Phone Audio Guestbook project aims to create a unique and nostalgic e
 
 The core functionality involves an interactive audio experience. When a user picks up the handset, they will be greeted with a pre-recorded message. After the greeting, the system will prompt them to leave their own message, which will be recorded and stored digitally. The goal is to seamlessly blend the charm of analog hardware with modern digital recording and storage capabilities, creating a delightful and memorable way for people to share their thoughts and voices. Future enhancements may include options for message playback and remote access to the collected audio archive.
 
-**Target Audience:** Software engineers tasked with implementing and maintaining the project.  
-**Python Version:** 3.10+ (development on 3.12)  
-**OS:** Raspberry Pi OS (Bullseye or later)  
-**CI/CD:** GitHub Actions  
-**Documentation Hosting:** GitHub Pages / Read the Docs  
+**Target Audience:** Software engineers tasked with implementing and maintaining the project.
+**Python Version:** 3.10+ (development on 3.12)
+**OS:** Raspberry Pi OS (Bullseye or later)
+**CI/CD:** GitHub Actions
+**Documentation Hosting:** GitHub Pages / Read the Docs
 **Branching Model:** Feature-branch workflow
 * * *
 
 ### 1. Project Structure & Folder Layout
-    
-    
+
+
     rotary-guestbook/
     ├── docs/                   # Sphinx documentation source
     │   ├── _static/
@@ -54,7 +54,7 @@ The core functionality involves an interactive audio experience. When a user pic
     ├── config.yaml.example     # Default config
     ├── start.sh                # Boot script
     └── README.md
-    
+
 
 * * *
 
@@ -84,24 +84,24 @@ The core functionality involves an interactive audio experience. When a user pic
 ### 3. Docstring Conventions (Google style, Sphinx-compatible)
 
 Every public module, class, and function must include docstrings:
-    
-    
+
+
     """
     Brief one-line summary.
-    
+
     Longer description if needed.
-    
+
     Args:
         param1 (str): Description of param1.
         param2 (int): Description of param2.
-    
+
     Returns:
         bool: What the return value means.
-    
+
     Raises:
         ValueError: When X condition fails.
     """
-    
+
 
 - Use `:param name:`, `:return:`, `:raises:` tags in `.rst` if manually documenting.
 - Sphinx `autodoc` will pull directly from code.
@@ -143,10 +143,10 @@ Within `docs/usage.rst`:
 - **Running services** (`systemd` units)
 
 Build docs with:
-    
-    
+
+
     cd docs && make html
-    
+
 
 * * *
 
@@ -158,8 +158,8 @@ Build docs with:
 - **Coverage Enforcement:** `pytest --cov=rotary_guestbook --cov-fail-under=90` and `interrogate --min-coverage 100`.
 
 Sample `ci.yml` steps:
-    
-    
+
+
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
       with: {python-version: '3.12'}
@@ -169,7 +169,7 @@ Sample `ci.yml` steps:
     - run: flake8
     - run: mypy src/rotary_guestbook
     - run: interrogate --min-coverage 100
-    
+
 
 * * *
 

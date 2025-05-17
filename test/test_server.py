@@ -1,17 +1,22 @@
+"""Unit tests for the web server application.
+
+This module contains tests for the Flask web server endpoints and functionality.
+"""
+
+import logging
 import sys
 from pathlib import Path
-import logging
 
 from flask import (
     Flask,
     Response,
-    render_template,
-    redirect,
-    request,
-    url_for,
-    jsonify,
     flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
     send_file,
+    url_for,
 )
 from ruamel.yaml import YAML
 
@@ -151,7 +156,7 @@ def download_file(filename):
 
 @app.route("/delete/<filename>", methods=["POST"])
 def delete_file(filename):
-    """Delete a specific recording."""
+    """Delete a specific recording file."""
     file_path = recordings_path / filename
     try:
         file_path.unlink()
@@ -165,7 +170,7 @@ def delete_file(filename):
 
 @app.route("/api/recordings")
 def get_recordings():
-    """API route to get a list of all recordings."""
+    """Return a list of available recordings."""
     files = [f.name for f in recordings_path.iterdir() if f.is_file()]
     return jsonify(files)
 

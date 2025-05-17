@@ -53,9 +53,9 @@ For each module below, follow this pattern:
 
 1.  **`src/rotary_guestbook/errors.py`:**
     *   **Goal:** Define custom application exceptions.
-    *   **Implementation:** 
+    *   **Implementation:**
         *   [x] Create base `GuestbookError` and specific errors like `ConfigError`, `AudioError`, `HardwareError`, `ArchiveError`.
-    *   **Testing (`tests/unit/test_errors.py`):** 
+    *   **Testing (`tests/unit/test_errors.py`):**
         *   [x] Test that exceptions can be raised and caught, and that they store messages correctly.
 
 2.  **`src/rotary_guestbook/config.py` (ConfigManager):**

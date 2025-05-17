@@ -27,13 +27,13 @@ Note:
 """
 
 from rotary_guestbook.errors import (
-    GuestbookError,
-    ConfigError,
-    AudioError,
-    HardwareError,
     ArchiveError,
-    WebError,
+    AudioError,
+    ConfigError,
+    GuestbookError,
+    HardwareError,
     HealthError,
+    WebError,
 )
 
 

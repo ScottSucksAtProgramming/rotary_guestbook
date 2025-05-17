@@ -1,9 +1,9 @@
 import threading
-from unittest.mock import MagicMock, patch, Mock
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import yaml
-from pathlib import Path
 
 from rotary_guestbook.audioGuestBook import AudioGuestBook, CurrentEvent
 
