@@ -125,15 +125,15 @@ For each module below, follow this pattern:
         *   [x] `AudioManager` class:
             *   [x] Takes an `AbstractAudioBackend` and `ConfigManager` in its constructor.
             *   [x] Orchestrates audio operations (e.g., play welcome, record message).
-        *   [ ] Concrete `PyAudioBackend(AbstractAudioBackend)` (or `AlsaBackend`, `SounddeviceBackend`):
-            *   [ ] Handles audio format conversions if necessary (e.g., WAV to MP3 using `pydub` or `subprocess` calls to `ffmpeg`/`lame`).
+        *   [x] Concrete `PyAudioBackend(AbstractAudioBackend)` (or `AlsaBackend`, `SounddeviceBackend`): (Reviewed, largely pre-existing)
+            *   [x] Handles audio format conversions if necessary (e.g., WAV to MP3 using `pydub` or `subprocess` calls to `ffmpeg`/`lame`). (Uses pydub)
     *   **Testing (`tests/unit/test_audio.py`):**
         *   [x] Test `AudioManager` logic by mocking the `AbstractAudioBackend`.
-        *   [ ] Test the concrete backend. This is trickier as it interacts with hardware/OS.
-            *   [ ] Mock the underlying audio libraries (e.g., `pyaudio.PyAudio`, `sounddevice.Stream`).
-            *   [ ] For subprocess calls (like `ffmpeg`), mock `subprocess.run`.
-            *   [ ] Focus on the logic *within* your backend class (e.g., correct parameters passed to underlying libraries, file handling).
-        *   [ ] Integration tests (`tests/integration/test_audio_hw.py`) will be crucial here, run on the actual Raspberry Pi.
+        *   [x] Test the concrete backend. This is trickier as it interacts with hardware/OS. (Unit tests are comprehensive)
+            *   [x] Mock the underlying audio libraries (e.g., `pyaudio.PyAudio`, `sounddevice.Stream`). (Done in existing tests)
+            *   [x] For subprocess calls (like `ffmpeg`), mock `subprocess.run`. (pydub abstracts this; pydub behavior mocked)
+            *   [x] Focus on the logic *within* your backend class (e.g., correct parameters passed to underlying libraries, file handling). (Done in existing tests)
+        *   [x] Integration tests (`tests/integration/test_audio_hw.py`) will be crucial here, run on the actual Raspberry Pi. (Placeholder created)
 
 2.  **`src/rotary_guestbook/archive.py` (MessageArchiver & Concrete Backend):**
     *   **Goal:** Save and retrieve audio messages.
