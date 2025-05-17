@@ -4,7 +4,7 @@
     *   [x] Create the directory structure as outlined in `context.md`:
         *   [x] `rotary-guestbook/`
         *   [x] `docs/` (with subdirectories)
-        *   [x] `src/guestbook/`
+        *   [x] `src/rotary_guestbook/`
         *   [x] `tests/unit/`
         *   [x] `tests/integration/`
         *   [x] `.github/workflows/`
@@ -39,26 +39,26 @@
         *   [x] Checks out the code.
         *   [x] Sets up Python.
         *   [x] Installs dependencies (from `requirements.txt` and `setup.cfg` for editable install).
-        *   [x] Runs linters and type checkers (pre-commit hooks essentially: `black --check`, `isort --check-only`, `flake8`, `mypy src/guestbook tests`).
+        *   [x] Runs linters and type checkers (pre-commit hooks essentially: `black --check`, `isort --check-only`, `flake8`, `mypy src/rotary_guestbook tests`).
         *   [x] Runs `interrogate --min-coverage 100` (initially, you might set a lower coverage goal for `interrogate` and `pytest --cov` until code is written).
         *   [x] Includes a placeholder for running tests (e.g., `pytest tests`).
 
 **Phase 1: Core Services Implementation & Testing**
 
 For each module below, follow this pattern:
-    a.  Create the file (e.g., `src/guestbook/errors.py`).
+    a.  Create the file (e.g., `src/rotary_guestbook/errors.py`).
     b.  Define the classes/functions with full docstrings (Google style).
     c.  Write unit tests in the corresponding `tests/unit/` file (e.g., `tests/unit/test_errors.py`). Aim for high test coverage.
     d.  Ensure all pre-commit checks pass.
 
-1.  **`src/guestbook/errors.py`:**
+1.  **`src/rotary_guestbook/errors.py`:**
     *   **Goal:** Define custom application exceptions.
     *   **Implementation:** 
         *   [x] Create base `GuestbookError` and specific errors like `ConfigError`, `AudioError`, `HardwareError`, `ArchiveError`.
     *   **Testing (`tests/unit/test_errors.py`):** 
         *   [x] Test that exceptions can be raised and caught, and that they store messages correctly.
 
-2.  **`src/guestbook/config.py` (ConfigManager):**
+2.  **`src/rotary_guestbook/config.py` (ConfigManager):**
     *   **Goal:** Manage application configuration.
     *   **Implementation:**
         *   [ ] Class `ConfigManager` to load settings from a YAML file (e.g., `config.yaml`).
@@ -71,7 +71,7 @@ For each module below, follow this pattern:
         *   [ ] Test access to different config sections and values.
         *   [ ] Mock filesystem operations (`open`, `yaml.safe_load`).
 
-3.  **`src/guestbook/logger.py`:**
+3.  **`src/rotary_guestbook/logger.py`:**
     *   **Goal:** Centralized logging setup.
     *   **Implementation:**
         *   [ ] Function `setup_logging(config: ConfigManager)` that configures a root logger.
@@ -84,7 +84,7 @@ For each module below, follow this pattern:
 
 **Phase 2: Core Application Logic & Interfaces**
 
-1.  **`src/guestbook/app.py` (AppController - Initial Skeleton):**
+1.  **`src/rotary_guestbook/app.py` (AppController - Initial Skeleton):**
     *   **Goal:** Application entry point and orchestrator.
     *   **Implementation (Initial):**
         *   [ ] Define `AppController` class.
@@ -96,18 +96,18 @@ For each module below, follow this pattern:
 
 2.  **Define Core Interfaces (Abstract Base Classes - ABCs):**
     *   Based on `context.md` and potential needs, create ABCs in appropriate files or a new `interfaces.py` if preferred.
-    *   **`src/guestbook/audio.py` (AudioBackend Interface):**
+    *   **`src/rotary_guestbook/audio.py` (AudioBackend Interface):**
         *   [ ] `AbstractAudioBackend(abc.ABC)`:
             *   [ ] `@abc.abstractmethod def play_greeting(self): pass`
             *   [ ] `@abc.abstractmethod def start_recording(self, filename: str): pass`
             *   [ ] `@abc.abstractmethod def stop_recording(self): pass`
             *   [ ] `@abc.abstractmethod def convert_to_mp3(self, input_wav: str, output_mp3: str): pass` (or similar processing methods)
-    *   **`src/guestbook/archive.py` (StorageBackend Interface):**
+    *   **`src/rotary_guestbook/archive.py` (StorageBackend Interface):**
         *   [ ] `AbstractStorageBackend(abc.ABC)`:
             *   [ ] `@abc.abstractmethod def save_message(self, audio_file_path: str, metadata: dict) -> str: pass` (returns message ID or path)
             *   [ ] `@abc.abstractmethod def get_message(self, message_id: str) -> Optional[Tuple[str, dict]]: pass` (returns audio_file_path, metadata)
             *   [ ] `@abc.abstractmethod def list_messages(self) -> List[dict]: pass`
-    *   **`src/guestbook/phone.py` (PhoneHardwareInterface - if abstracting hardware interaction):**
+    *   **`src/rotary_guestbook/phone.py` (PhoneHardwareInterface - if abstracting hardware interaction):**
         *   [ ] `AbstractPhoneHardware(abc.ABC)`:
             *   [ ] `@abc.abstractmethod def wait_for_hook_event(self) -> HookEvent: pass` (e.g., `HookEvent.OFF_HOOK`, `HookEvent.ON_HOOK`)
             *   [ ] `@abc.abstractmethod def is_receiver_off_hook(self) -> bool: pass`
@@ -116,7 +116,7 @@ For each module below, follow this pattern:
 
 **Phase 3: Implementing Core Feature Modules**
 
-1.  **`src/guestbook/audio.py` (AudioManager & Concrete Backend):**
+1.  **`src/rotary_guestbook/audio.py` (AudioManager & Concrete Backend):**
     *   **Goal:** Manage audio playback and recording.
     *   **Implementation:**
         *   [ ] `AudioManager` class:
@@ -133,7 +133,7 @@ For each module below, follow this pattern:
             *   [ ] Focus on the logic *within* your backend class (e.g., correct parameters passed to underlying libraries, file handling).
         *   [ ] Integration tests (`tests/integration/test_audio_hw.py`) will be crucial here, run on the actual Raspberry Pi.
 
-2.  **`src/guestbook/archive.py` (MessageArchiver & Concrete Backend):**
+2.  **`src/rotary_guestbook/archive.py` (MessageArchiver & Concrete Backend):**
     *   **Goal:** Save and retrieve audio messages.
     *   **Implementation:**
         *   [ ] `MessageArchiver` class:
@@ -146,7 +146,7 @@ For each module below, follow this pattern:
         *   [ ] Test `MessageArchiver` logic with a mocked `AbstractStorageBackend`.
         *   [ ] Test `FileSystemStorageBackend` by mocking filesystem calls (`os.path.exists`, `open`, `os.makedirs`, `shutil.move`, etc.) using `unittest.mock.patch` or `pyfakefs`.
 
-3.  **`src/guestbook/phone.py` (PhoneEventHandler & Concrete Hardware):**
+3.  **`src/rotary_guestbook/phone.py` (PhoneEventHandler & Concrete Hardware):**
     *   **Goal:** Handle phone hardware events (hook switch, rotary dial).
     *   **Implementation:**
         *   [ ] `PhoneEventHandler` class:
@@ -168,7 +168,7 @@ For each module below, follow this pattern:
 
 **Phase 4: Web Interface, Health Monitoring, and Application Assembly**
 
-1.  **`src/guestbook/web.py` (WebInterface - Flask):**
+1.  **`src/rotary_guestbook/web.py` (WebInterface - Flask):**
     *   **Goal:** Provide a web UI for message playback, system status.
     *   **Implementation:**
         *   [ ] Flask app.
@@ -179,7 +179,7 @@ For each module below, follow this pattern:
         *   [ ] Mock the injected services.
         *   [ ] Test routes return correct status codes, content types, and basic HTML structure or JSON data.
 
-2.  **`src/guestbook/health.py` (SystemHealthMonitor):**
+2.  **`src/rotary_guestbook/health.py` (SystemHealthMonitor):**
     *   **Goal:** Monitor system health (disk space, audio device status, etc.).
     *   **Implementation:**
         *   [ ] `SystemHealthMonitor` class.
@@ -190,7 +190,7 @@ For each module below, follow this pattern:
         *   [ ] Mock system calls (`shutil.disk_usage`, `subprocess.run` for `aplay -l` or similar).
         *   [ ] Test logic for determining health status based on mocked return values.
 
-3.  **`src/guestbook/app.py` (AppController - Full Implementation):**
+3.  **`src/rotary_guestbook/app.py` (AppController - Full Implementation):**
     *   **Goal:** Tie all components together.
     *   **Implementation:**
         *   [ ] In `__init__`, instantiate all concrete dependencies (or have them passed in from a main script/`start.sh`).
@@ -225,10 +225,10 @@ For each module below, follow this pattern:
 3.  **`start.sh` Script:**
     *   [x] Activates virtual environment (if applicable).
     *   [x] Navigates to the project directory.
-    *   [x] Runs the main application (`python -m src.guestbook.app` or similar if you make `app.py` executable and add a `if __name__ == "__main__":` block).
+    *   [x] Runs the main application (`python -m src.rotary_guestbook.app` or similar if you make `app.py` executable and add a `if __name__ == "__main__":` block).
 
 4.  **Final CI/CD Polish:**
-    *   [ ] Ensure `pytest --cov=guestbook --cov-fail-under=90` (or your target) passes.
+    *   [ ] Ensure `pytest --cov=rotary_guestbook --cov-fail-under=90` (or your target) passes.
     *   [ ] Ensure `interrogate --min-coverage 100` passes.
     *   [ ] Consider adding a step to build and publish docs to GitHub Pages.
     *   [ ] Consider adding a release workflow (tagging, building wheel, publishing to PyPI).
@@ -242,6 +242,6 @@ For each module below, follow this pattern:
 
 This is a comprehensive plan. We'll take it step-by-step.
 
-Since `src/guestbook/` doesn't exist, our immediate first step is **Phase 0: Project Setup & CI Foundation**.
+Since `src/rotary_guestbook/` doesn't exist, our immediate first step is **Phase 0: Project Setup & CI Foundation**.
 
 Would you like to start by creating the basic directory structure and some of the initial configuration files like `pyproject.toml` and `.pre-commit-config.yaml`? I can guide you on the content for those.

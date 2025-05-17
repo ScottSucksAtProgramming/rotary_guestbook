@@ -80,9 +80,9 @@ This document outlines the core principles and practices we will adhere to while
     *   Code designed with testability in mind is often more modular, decoupled, and adheres to SRP and DIP.
     *   Ensure high test coverage (`pytest --cov`). Unit tests are crucial.
 *   **Error Handling:**
-    *   Use custom, specific exceptions (`src/guestbook/errors.py`).
+    *   Use custom, specific exceptions (`src/rotary_guestbook/errors.py`).
     *   Catch exceptions at appropriate boundaries.
-    *   Log errors effectively (`src/guestbook/logger.py`).
+    *   Log errors effectively (`src/rotary_guestbook/logger.py`).
     *   Provide user-friendly error messages when applicable (e.g., in Web UI).
     *   Avoid catching generic `Exception` unless you specifically intend to and handle it properly (e.g., at the very top level of an application loop to log and prevent a crash).
 

@@ -26,7 +26,7 @@ The core functionality involves an interactive audio experience. When a user pic
     │   └── usage.rst          # user & deployment guides
     │
     ├── src/                    # Production code
-    │   └── guestbook/
+    │   └── rotary_guestbook/
     │       ├── __init__.py
     │       ├── app.py          # AppController entry point
     │       ├── phone.py        # PhoneEventHandler
@@ -109,12 +109,12 @@ Every public module, class, and function must include docstrings:
 
 ### 4. Logging & Error Handling Modules
 
-- **`src/guestbook/logger.py`**
+- **`src/rotary_guestbook/logger.py`**
 
     - Configures a root logger with rotating file handler and console output.
 
     - Log levels and format defined via config.
-- **`src/guestbook/errors.py`**
+- **`src/rotary_guestbook/errors.py`**
 
     - Defines custom exceptions (e.g., `ConfigError`, `AudioError`, `HardwareError`).
 
@@ -155,7 +155,7 @@ Build docs with:
 - **Unit Tests:** in `tests/unit` using `pytest` + `pytest-mock` to mock GPIO, subprocess, filesystem.
 - **Integration Tests:** in `tests/integration`, run on Pi with real GPIO & audio interface.
 - **End-to-End (E2E):** Optional `tests/e2e` using a Raspberry Pi testbed; use `pexpect` to run `app.py` and simulate events.
-- **Coverage Enforcement:** `pytest --cov=guestbook --cov-fail-under=90` and `interrogate --min-coverage 100`.
+- **Coverage Enforcement:** `pytest --cov=rotary_guestbook --cov-fail-under=90` and `interrogate --min-coverage 100`.
 
 Sample `ci.yml` steps:
     
@@ -165,9 +165,9 @@ Sample `ci.yml` steps:
       with: {python-version: '3.12'}
     - run: pip install -r requirements.txt
     - run: pip install -e .
-    - run: pytest --maxfail=1 --disable-warnings --cov=guestbook --cov-fail-under=90
+    - run: pytest --maxfail=1 --disable-warnings --cov=rotary_guestbook --cov-fail-under=90
     - run: flake8
-    - run: mypy src/guestbook
+    - run: mypy src/rotary_guestbook
     - run: interrogate --min-coverage 100
     
 
