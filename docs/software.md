@@ -2,71 +2,93 @@
 
 ## Core Architecture
 
-The Rotary Phone Audio Guestbook is transitioning to a modular, event-driven architecture orchestrated by a central controller. This design promotes separation of concerns, testability, and maintainability.
+The Rotary Phone Audio Guestbook is built upon a modular, event-driven architecture orchestrated by a central controller. This design promotes separation of concerns, testability, and maintainability through the use of well-defined interfaces (Abstract Base Classes - ABCs) and dependency injection.
 
 ### 1. Application Controller (`src/rotary_guestbook/app.py`)
 
 - **`AppController`**: The main entry point and orchestrator of the application.
   - Initializes and manages the lifecycle of all other major components.
-  - Coordinates interactions between different modules (e.g., phone events, audio processing, web interface).
+  - Coordinates interactions between different modules by injecting concrete implementations of the defined interfaces.
 
 ### 2. Configuration Management (`src/rotary_guestbook/config.py`)
 
-- **`ConfigManager`**: Handles loading, validation, and access to application settings from `config.yaml`.
-  - Provides a centralized and type-safe way to manage configuration.
+- **`ConfigManager`**: Handles loading, validation (using Pydantic), and access to application settings from `config.yaml`.
+  - Provides a centralized and type-safe way to manage configuration for all modules.
 
-## Key Components
+### 3. Core Interfaces
 
-### 1. Audio Interface (`src/rotary_guestbook/audio_interface.py`)
-*(Previously `src/audioInterface.py`)*
+To ensure a decoupled and extensible system, the following core interfaces (ABCs) are defined:
 
-- Utilizes ALSA's native `aplay`/`arecord` via subprocess calls for audio operations.
-- Manages the low-level details of audio playback and recording.
-- Provides a clean interface for audio operations to other parts of the system.
+#### a. Audio Backend (`src/rotary_guestbook/audio.py`)
 
-### 2. Phone Event Handling & Business Logic (Legacy: `src/rotary_guestbook/audioGuestBook.py`)
-*(Previously `src/audioGuestBook.py`; to be refactored into `PhoneEventHandler`, `AudioManager` etc.)*
+- **`AbstractAudioBackend`**: Defines the contract for all audio operations.
+  - `play_greeting()`: Plays the welcome message.
+  - `start_recording(filename: str)`: Initiates audio recording to a file.
+  - `stop_recording()`: Halts the current recording.
+  - `convert_to_mp3(input_wav: str, output_mp3: str)`: Handles audio format conversion.
+- Concrete implementations (e.g., `PyAudioBackend`, `AlsaBackend`) will provide the specific logic for these operations, interacting with system audio libraries or tools like `ffmpeg`/`lame`.
 
-- Currently, this module contains the main operational logic of the guestbook.
-- It handles GPIO pin interactions for hook switch events (on-hook, off-hook).
-- Manages the state of the guestbook (e.g., idle, playing greeting, recording).
-- **Off-hook sequence:**
-    - Plays a welcome message (e.g., `sounds/voicemail.wav`).
-    - Plays a beep sound (e.g., `sounds/beep.wav`) to indicate the start of recording.
-    - Begins recording the guest's voice message.
-- **On-hook sequence (or recording limit reached):**
-    - Stops the recording.
-    - Saves the message to the `recordings/` directory.
-    - If the recording limit (from `config.yaml`) is exceeded, it plays a warning (e.g., `sounds/time_exceeded.wav`) before stopping.
-- The behavior adapts based on the `hook_type` (NC/NO) specified in `config.yaml`.
+#### b. Storage Backend (`src/rotary_guestbook/archive.py`)
 
-### 3. Web Server (`webserver/server.py`)
+- **`AbstractStorageBackend`**: Defines the contract for message persistence.
+  - `save_message(audio_file_path: str, metadata: dict) -> str`: Saves a recorded message and its associated metadata.
+  - `get_message(message_id: str) -> Optional[Tuple[str, dict]]`: Retrieves a specific message.
+  - `list_messages() -> List[dict]`: Lists all stored messages.
+- Concrete implementations (e.g., `FileSystemStorageBackend`) will manage how and where messages are stored (e.g., local filesystem, cloud storage).
 
-- A Flask-based web server providing a user interface for managing recordings and system settings.
+#### c. Phone Hardware (`src/rotary_guestbook/phone.py`)
+
+- **`AbstractPhoneHardware`**: Defines the contract for interacting with the physical phone hardware.
+  - `wait_for_hook_event() -> HookEvent`: Blocks until a hook event (on-hook/off-hook) is detected.
+  - `is_receiver_off_hook() -> bool`: Checks the current state of the hook.
+- **`HookEvent` (Enum)**: Represents phone events (`ON_HOOK`, `OFF_HOOK`).
+- Concrete implementations (e.g., `RPiGPIOPhoneHardware`) will handle the specifics of GPIO pin monitoring or other hardware interaction methods.
+
+### 4. Key Components (to be implemented/refactored)
+
+These components will utilize the interfaces above and the `ConfigManager`.
+
+#### a. Audio Manager (`src/rotary_guestbook/audio.py`)
+
+- **`AudioManager`**: Orchestrates high-level audio tasks (e.g., "play welcome and record message sequence").
+  - Takes an `AbstractAudioBackend` and `ConfigManager`.
+  - Will replace parts of the logic previously in `audioGuestBook.py`.
+
+#### b. Message Archiver (`src/rotary_guestbook/archive.py`)
+
+- **`MessageArchiver`**: Manages the lifecycle of messages, including metadata generation and interaction with the storage backend.
+  - Takes an `AbstractStorageBackend` and `ConfigManager`.
+
+#### c. Phone Event Handler (`src/rotary_guestbook/phone.py`)
+
+- **`PhoneEventHandler`**: Contains the core state machine and business logic of the guestbook.
+  - Responds to hardware events from `AbstractPhoneHardware`.
+  - Uses `AudioManager` to play sounds and record messages.
+  - Uses `MessageArchiver` to save messages.
+  - Takes `AbstractPhoneHardware`, `AudioManager`, `MessageArchiver`, and `ConfigManager`.
+  - This will be the primary consumer of the defined interfaces and will encapsulate most of the application's operational logic, replacing the bulk of `audioGuestBook.py`.
+
+### 5. Web Server (`webserver/server.py`)
+
+- A Flask-based web server providing a user interface for:
+  - Listing and playing back recorded messages (interacting with `MessageArchiver`).
+  - Viewing system status and health (potentially via a `SystemHealthMonitor`).
+  - (Potentially) Modifying parts of the application configuration.
 - Runs on a configurable port (default: 5000, as specified in `config.yaml`).
-- Accessible on the local network via the Raspberry Pi's IP address (e.g., `192.168.1.100:5000`).
-- **Features:**
-  - Dynamically lists recordings from the `recordings/` directory.
-  - Playback of recorded messages directly in the browser.
-  - Editing of recorded file names.
-  - Bulk, individual, or selectable download of recordings.
-  - Deletion of recordings.
-  - Configuration of all `config.yaml` parameters via a settings page.
-  - Light and dark themes.
+- Accessible on the local network via the Raspberry Pi's IP address.
 - A `.service` file can be used for automatic startup with `systemd`.
 
-![Webserver Home Dark](../images/webserver_home_dark.png)
-*Webserver - Home (Dark Theme)*
+### 6. System Health Monitor (`src/rotary_guestbook/health.py`)
 
-![Webserver Settings Dark 1](../images/webserver_settings_dark_1.png)
-*Webserver - Settings (Dark Theme - Part 1)*
+- **`SystemHealthMonitor`**: (To be implemented) Responsible for checking system vitals like disk space, audio device status, etc.
+  - Provides information to the web interface and logs critical issues.
+  - Takes `ConfigManager`.
 
-![Webserver Settings Dark 2](../images/webserver_settings_dark_2.png)
-*Webserver - Settings (Dark Theme - Part 2)*
+## Legacy Components (to be phased out or refactored)
 
-![Webserver Home Light](../images/webserver_home_light.png)
-*Webserver - Home (Light Theme)*
+- `src/rotary_guestbook/audio_interface.py` (functionality absorbed by `AbstractAudioBackend` implementations and `AudioManager`).
+- `src/rotary_guestbook/audioGuestBook.py` (logic to be distributed among `PhoneEventHandler`, `AudioManager`, and `MessageArchiver`).
 
 ---
 
-*Note: Path references like `../src/audioInterface.py` will be updated as the project structure evolves with the refactoring.*
+*Note: The architecture promotes a clean separation between abstract interfaces and their concrete implementations, facilitating testing and future modifications.*

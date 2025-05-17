@@ -59,11 +59,11 @@ If you modify dependencies in pyproject.toml, update requirements.txt with:
 uv pip compile pyproject.toml -o requirements.txt
 ```
 
-Alternatively, to directly run the main audioGuestBook script:
+Alternatively, to directly run the main application (once AppController is fully implemented):
 
 ```bash
-# Directly run audioGuestBook
-uv run src/audioGuestBook.py
+# Directly run the main application
+uv run src/rotary_guestbook/app.py
 ```
 
 ### Installing Gevent

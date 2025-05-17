@@ -100,21 +100,21 @@ For each module below, follow this pattern:
 2.  **Define Core Interfaces (Abstract Base Classes - ABCs):**
     *   Based on `context.md` and potential needs, create ABCs in appropriate files or a new `interfaces.py` if preferred.
     *   **`src/rotary_guestbook/audio.py` (AudioBackend Interface):**
-        *   [ ] `AbstractAudioBackend(abc.ABC)`:
-            *   [ ] `@abc.abstractmethod def play_greeting(self): pass`
-            *   [ ] `@abc.abstractmethod def start_recording(self, filename: str): pass`
-            *   [ ] `@abc.abstractmethod def stop_recording(self): pass`
-            *   [ ] `@abc.abstractmethod def convert_to_mp3(self, input_wav: str, output_mp3: str): pass` (or similar processing methods)
+        *   [x] `AbstractAudioBackend(abc.ABC)`:
+            *   [x] `@abc.abstractmethod def play_greeting(self): pass`
+            *   [x] `@abc.abstractmethod def start_recording(self, filename: str): pass`
+            *   [x] `@abc.abstractmethod def stop_recording(self): pass`
+            *   [x] `@abc.abstractmethod def convert_to_mp3(self, input_wav: str, output_mp3: str): pass` (or similar processing methods)
     *   **`src/rotary_guestbook/archive.py` (StorageBackend Interface):**
-        *   [ ] `AbstractStorageBackend(abc.ABC)`:
-            *   [ ] `@abc.abstractmethod def save_message(self, audio_file_path: str, metadata: dict) -> str: pass` (returns message ID or path)
-            *   [ ] `@abc.abstractmethod def get_message(self, message_id: str) -> Optional[Tuple[str, dict]]: pass` (returns audio_file_path, metadata)
-            *   [ ] `@abc.abstractmethod def list_messages(self) -> List[dict]: pass`
+        *   [x] `AbstractStorageBackend(abc.ABC)`:
+            *   [x] `@abc.abstractmethod def save_message(self, audio_file_path: str, metadata: dict) -> str: pass` (returns message ID or path)
+            *   [x] `@abc.abstractmethod def get_message(self, message_id: str) -> Optional[Tuple[str, dict]]: pass` (returns audio_file_path, metadata)
+            *   [x] `@abc.abstractmethod def list_messages(self) -> List[dict]: pass`
     *   **`src/rotary_guestbook/phone.py` (PhoneHardwareInterface - if abstracting hardware interaction):**
-        *   [ ] `AbstractPhoneHardware(abc.ABC)`:
-            *   [ ] `@abc.abstractmethod def wait_for_hook_event(self) -> HookEvent: pass` (e.g., `HookEvent.OFF_HOOK`, `HookEvent.ON_HOOK`)
-            *   [ ] `@abc.abstractmethod def is_receiver_off_hook(self) -> bool: pass`
-            *   [ ] Define `HookEvent` Enum.
+        *   [x] `AbstractPhoneHardware(abc.ABC)`:
+            *   [x] `@abc.abstractmethod def wait_for_hook_event(self) -> HookEvent: pass` (e.g., `HookEvent.OFF_HOOK`, `HookEvent.ON_HOOK`)
+            *   [x] `@abc.abstractmethod def is_receiver_off_hook(self) -> bool: pass`
+            *   [x] Define `HookEvent` Enum.
     *   **Testing:** For ABCs, tests aren't typically about direct functionality but might involve ensuring concrete classes implement all abstract methods (though `mypy` and Python's runtime will catch this).
 
 **Phase 3: Implementing Core Feature Modules**
