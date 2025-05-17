@@ -32,6 +32,7 @@ from rotary_guestbook.config import (
     AudioSettings,
     Config,
     ConfigManager,
+    ConversionSettings,
     HardwareSettings,
     LoggingSettings,
     RecordingSettings,
@@ -189,16 +190,6 @@ def test_default_values() -> None:
 
 def test_audio_settings_validation() -> None:
     """Test validation of audio settings."""
-    # Test invalid sample rate
-    with pytest.raises(ValueError) as exc_info:
-        AudioSettings(recording=RecordingSettings(rate=1000))  # Below minimum
-    assert "Input should be greater than or equal to 8000" in str(exc_info.value)
-
-    # Test invalid channels
-    with pytest.raises(ValueError) as exc_info:
-        AudioSettings(recording=RecordingSettings(channels=3))  # Above maximum
-    assert "Input should be less than or equal to 2" in str(exc_info.value)
-
     # Test invalid output_directory
     with pytest.raises(ValueError) as exc_info:
         AudioSettings(output_directory="/abs/path/recordings")
@@ -207,6 +198,36 @@ def test_audio_settings_validation() -> None:
     with pytest.raises(ValueError) as exc_info:
         AudioSettings(output_directory="")
     assert "output_directory must be a non-empty string" in str(exc_info.value)
+    # Valid case
+    assert AudioSettings(output_directory="rec").output_directory == "rec"
+
+    # Test min_recording_time boundaries (ge=1, le=60)
+    with pytest.raises(ValueError):
+        AudioSettings(min_recording_time=0)
+    with pytest.raises(ValueError):
+        AudioSettings(min_recording_time=61)
+    assert AudioSettings(min_recording_time=1).min_recording_time == 1
+    assert AudioSettings(min_recording_time=60).min_recording_time == 60
+
+    # Test silence_threshold boundaries (ge=0.0, le=1.0)
+    with pytest.raises(ValueError):
+        AudioSettings(silence_threshold=-0.1)
+    with pytest.raises(ValueError):
+        AudioSettings(silence_threshold=1.1)
+    assert AudioSettings(silence_threshold=0.0).silence_threshold == 0.0
+    assert AudioSettings(silence_threshold=1.0).silence_threshold == 1.0
+
+    # Test silence_duration boundaries (ge=1, le=10)
+    with pytest.raises(ValueError):
+        AudioSettings(silence_duration=0)
+    with pytest.raises(ValueError):
+        AudioSettings(silence_duration=11)
+    assert AudioSettings(silence_duration=1).silence_duration == 1
+    assert AudioSettings(silence_duration=10).silence_duration == 10
+
+    # Test that default RecordingSettings and ConversionSettings are valid
+    assert AudioSettings().recording is not None
+    assert AudioSettings().conversion is not None
 
 
 def test_hardware_settings_validation() -> None:
@@ -259,16 +280,38 @@ def test_system_settings_validation() -> None:
     with pytest.raises(ValueError) as exc_info:
         SystemSettings(health_check_interval=30)  # Below minimum
     assert "health_check_interval" in str(exc_info.value)
+    assert SystemSettings(health_check_interval=60).health_check_interval == 60
 
     # Test invalid disk space threshold
     with pytest.raises(ValueError) as exc_info:
         SystemSettings(disk_space_threshold=40)  # Below minimum
     assert "disk_space_threshold" in str(exc_info.value)
+    with pytest.raises(ValueError):
+        SystemSettings(disk_space_threshold=101)  # Above maximum
+    assert SystemSettings(disk_space_threshold=50).disk_space_threshold == 50
+    assert SystemSettings(disk_space_threshold=100).disk_space_threshold == 100
+
+    # Test cpu_usage_threshold boundaries (ge=50, le=100)
+    with pytest.raises(ValueError):
+        SystemSettings(cpu_usage_threshold=49)
+    with pytest.raises(ValueError):
+        SystemSettings(cpu_usage_threshold=101)
+    assert SystemSettings(cpu_usage_threshold=50).cpu_usage_threshold == 50
+    assert SystemSettings(cpu_usage_threshold=100).cpu_usage_threshold == 100
+
+    # Test memory_usage_threshold boundaries (ge=50, le=100)
+    with pytest.raises(ValueError):
+        SystemSettings(memory_usage_threshold=49)
+    with pytest.raises(ValueError):
+        SystemSettings(memory_usage_threshold=101)
+    assert SystemSettings(memory_usage_threshold=50).memory_usage_threshold == 50
+    assert SystemSettings(memory_usage_threshold=100).memory_usage_threshold == 100
 
     # Test invalid archive interval
     with pytest.raises(ValueError) as exc_info:
         SystemSettings(archive_interval=1800)  # Below minimum
     assert "archive_interval" in str(exc_info.value)
+    assert SystemSettings(archive_interval=3600).archive_interval == 3600
 
 
 def test_save_config(config_file: Path) -> None:
@@ -310,3 +353,83 @@ def test_property_access(config_file: Path) -> None:
     assert isinstance(config_manager.web, WebSettings)
     assert isinstance(config_manager.logging, LoggingSettings)
     assert isinstance(config_manager.system, SystemSettings)
+
+
+def test_recording_settings_validation() -> None:
+    """Test validation of recording settings."""
+    # rate: ge=8000, le=192000
+    with pytest.raises(ValueError):
+        RecordingSettings(rate=7999)
+    with pytest.raises(ValueError):
+        RecordingSettings(rate=192001)
+    assert RecordingSettings(rate=8000).rate == 8000
+    assert RecordingSettings(rate=192000).rate == 192000
+
+    # channels: ge=1, le=2
+    with pytest.raises(ValueError):
+        RecordingSettings(channels=0)
+    with pytest.raises(ValueError):
+        RecordingSettings(channels=3)
+    assert RecordingSettings(channels=1).channels == 1
+    assert RecordingSettings(channels=2).channels == 2
+
+    # sample_width: ge=1, le=4
+    with pytest.raises(ValueError):
+        RecordingSettings(sample_width=0)
+    with pytest.raises(ValueError):
+        RecordingSettings(sample_width=5)
+    assert RecordingSettings(sample_width=1).sample_width == 1
+    assert RecordingSettings(sample_width=4).sample_width == 4
+
+    # chunk_size: ge=256, le=8192
+    with pytest.raises(ValueError):
+        RecordingSettings(chunk_size=255)
+    with pytest.raises(ValueError):
+        RecordingSettings(chunk_size=8193)
+    assert RecordingSettings(chunk_size=256).chunk_size == 256
+    assert RecordingSettings(chunk_size=8192).chunk_size == 8192
+
+    # max_duration_seconds: ge=10, le=600
+    with pytest.raises(ValueError):
+        RecordingSettings(max_duration_seconds=9)
+    with pytest.raises(ValueError):
+        RecordingSettings(max_duration_seconds=601)
+    assert RecordingSettings(max_duration_seconds=10).max_duration_seconds == 10
+    assert RecordingSettings(max_duration_seconds=600).max_duration_seconds == 600
+
+    # input_device_index is Optional[int], Pydantic handles type. Valid examples:
+    assert RecordingSettings(input_device_index=None).input_device_index is None
+    assert RecordingSettings(input_device_index=1).input_device_index == 1
+
+
+def test_conversion_settings_validation() -> None:
+    """Test validation of conversion settings."""
+    # mp3_bitrate: str
+    assert ConversionSettings(mp3_bitrate="128k").mp3_bitrate == "128k"
+    with pytest.raises(ValueError):  # Pydantic's ValidationError
+        ConversionSettings(mp3_bitrate=128)
+
+    # ffmpeg_parameters: Optional[List[str]]
+    assert ConversionSettings(ffmpeg_parameters=None).ffmpeg_parameters is None
+    assert ConversionSettings(ffmpeg_parameters=["-ac", "1"]).ffmpeg_parameters == [
+        "-ac",
+        "1",
+    ]
+    with pytest.raises(ValueError):
+        ConversionSettings(ffmpeg_parameters="not a list")
+    with pytest.raises(ValueError):
+        ConversionSettings(ffmpeg_parameters=[1, 2, 3])
+
+
+def test_get_audio_config_deprecated(config_file: Path) -> None:
+    """Test that get_audio_config issues a DeprecationWarning."""
+    config_manager = ConfigManager(str(config_file))
+    with pytest.warns(
+        DeprecationWarning,
+        match="ConfigManager.get_audio_config\\(\\) is deprecated. "
+        "Use .audio property instead.",
+    ):
+        audio_settings = config_manager.get_audio_config()
+        assert isinstance(
+            audio_settings, AudioSettings
+        )  # Also check it returns the right thing
