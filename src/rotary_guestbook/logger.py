@@ -74,6 +74,7 @@ def setup_logging(config_manager: ConfigManager) -> None:
             encoding="utf-8",
         )
         file_handler.setFormatter(formatter)
+        file_handler.setLevel(numeric_level)
         root_logger.addHandler(file_handler)
     except OSError as e:
         raise OSError(f"Failed to set up file logging: {e}") from e
