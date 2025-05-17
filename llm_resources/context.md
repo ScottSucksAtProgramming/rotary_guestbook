@@ -1,5 +1,10 @@
 ## Engineering Plan: Rotary Phone Audio Guestbook
 
+## Background
+The Rotary Phone Audio Guestbook project aims to create a unique and nostalgic experience for capturing audio messages, memories, and well-wishes. By repurposing a classic rotary dial telephone, this system will allow users to interact with a familiar vintage interface to leave personalized voice recordings. The project is designed to run on a Raspberry Pi, making it a compact and versatile solution for events, installations, or personal use.
+
+The core functionality involves an interactive audio experience. When a user picks up the handset, they will be greeted with a pre-recorded message. After the greeting, the system will prompt them to leave their own message, which will be recorded and stored digitally. The goal is to seamlessly blend the charm of analog hardware with modern digital recording and storage capabilities, creating a delightful and memorable way for people to share their thoughts and voices. Future enhancements may include options for message playback and remote access to the collected audio archive.
+
 **Target Audience:** Software engineers tasked with implementing and maintaining the project.  
 **Python Version:** 3.10+ (development on 3.12)  
 **OS:** Raspberry Pi OS (Bullseye or later)  
