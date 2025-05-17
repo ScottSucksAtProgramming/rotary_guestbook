@@ -30,6 +30,7 @@ repos:
     rev: v1.8.0
     hooks:
     -   id: mypy
+        args: [--config-file=mypy.ini]
         additional_dependencies: [types-PyYAML]
         exclude: ^(src/rotary_guestbook/audioGuestBook\.py|src/rotary_guestbook/audioInterface\.py|webserver/server\.py|tests/unit/test_audio_guestbook\.py|tests/unit/test_audio_interface\.py|test/test_server\.py)$
 
