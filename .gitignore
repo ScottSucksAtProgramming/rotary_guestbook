@@ -13,3 +13,7 @@ node_modules
 test/**/*.wav
 .vscode/
 .DS_Store
+
+# Test artifacts
+dummy.mp3
+dummy.wav
