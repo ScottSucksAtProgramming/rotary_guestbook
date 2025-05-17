@@ -26,7 +26,7 @@ Note:
     also be run independently for quick verification of the error handling system.
 """
 
-from src.guestbook.errors import (
+from rotary_guestbook.errors import (
     GuestbookError,
     ConfigError,
     AudioError,

@@ -13,7 +13,7 @@ import yaml
 from gpiozero import Button, Device
 from gpiozero.pins.rpigpio import RPiGPIOFactory
 
-from audioInterface import AudioInterface
+from rotary_guestbook.audioInterface import AudioInterface
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

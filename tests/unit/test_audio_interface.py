@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from audioInterface import AudioInterface
+from rotary_guestbook.audioInterface import AudioInterface
 
 
 @pytest.fixture
