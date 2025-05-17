@@ -3,7 +3,6 @@
 Handles audio recording, playback, and state management for the Rotary Phone Guestbook.
 """
 
-import logging
 import os
 import sys
 import threading
@@ -17,9 +16,9 @@ from gpiozero import Button, Device
 from gpiozero.pins.rpigpio import RPiGPIOFactory
 
 from rotary_guestbook.audioInterface import AudioInterface
+from rotary_guestbook.logger import get_logger
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 Device.pin_factory = RPiGPIOFactory()
 
 
@@ -240,10 +239,7 @@ class AudioGuestBook:
         """
         Handles the event when the recording time exceeds the limit.
         """
-        try:
-            logger.info("Recording time exceeded. Stopping recording.")
-        except ValueError:  # Suppress I/O operation on closed file in threads
-            pass
+        logger.info("Recording time exceeded. Stopping recording.")
         self.audio_interface.stop_recording()
         self.audio_interface.play_audio(
             self.config["time_exceeded"], self.config["time_exceeded_volume"], 0
