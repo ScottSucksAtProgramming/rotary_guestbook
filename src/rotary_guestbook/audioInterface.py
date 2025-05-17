@@ -12,8 +12,9 @@ class AudioInterface:
     """
     Interface for handling audio playback and recording.
 
-    This class provides methods to play audio files and manage audio recording processes,
-    supporting non-blocking recording to allow application control flow to continue.
+    This class provides methods to play audio files and manage audio recording
+    processes, supporting non-blocking recording to allow application control
+    flow to continue.
 
     Attributes:
         alsa_hw_mapping (str): ALSA hardware device mapping for audio input/output.
@@ -22,7 +23,8 @@ class AudioInterface:
         file_type (str): File type for recorded audio.
         sample_rate (int): Sampling rate for audio recording.
         channels (int): Number of audio channels for recording.
-        recording_process (subprocess.Popen or None): Handle to the current recording process, if any.
+        recording_process (subprocess.Popen or None): Handle to the current
+            recording process, if any.
     """
 
     def __init__(
@@ -69,14 +71,26 @@ class AudioInterface:
         )  # Ensure volume is between 0 and 100
         try:
             subprocess.run(
-                ["amixer", "set", self.mixer_control_name, f"{volume}%"], check=True
+                [
+                    "amixer",
+                    "set",
+                    self.mixer_control_name,
+                    f"{volume}%",
+                ],
+                check=True,
             )
         except subprocess.CalledProcessError as e:
             logger.error(f"Error setting volume: {e}")
 
-    def play_audio(self, input_file, volume=1, start_delay_sec=0):
+    def play_audio(self, input_file, volume=1, start_delay_sec=0, timeout=0.1):
         """
         Plays an audio file using `aplay` after setting the volume with `amixer`.
+
+        Args:
+            input_file (str): Path to the audio file to play
+            volume (float): Volume level as a percentage (0-1)
+            start_delay_sec (float): Delay before starting playback
+            timeout (float): Timeout for process polling in seconds
         """
         if not Path(input_file).exists():
             logger.error(f"Audio file {input_file} not found.")
@@ -104,7 +118,13 @@ class AudioInterface:
                     check=True,
                 )
                 subprocess.run(
-                    ["aplay", "-D", str(self.alsa_hw_mapping), silence_file], check=True
+                    [
+                        "aplay",
+                        "-D",
+                        str(self.alsa_hw_mapping),
+                        silence_file,
+                    ],
+                    check=True,
                 )
             except subprocess.CalledProcessError as e:
                 logger.error(f"Error generating or playing silence file: {e}")
@@ -112,7 +132,12 @@ class AudioInterface:
         # Play the actual audio file
         try:
             self.playback_process = subprocess.Popen(
-                ["aplay", "-D", str(self.alsa_hw_mapping), str(input_file)],
+                [
+                    "aplay",
+                    "-D",
+                    str(self.alsa_hw_mapping),
+                    str(input_file),
+                ],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
@@ -122,8 +147,8 @@ class AudioInterface:
                     self.playback_process.terminate()
                     self.playback_process.wait()
                     break
-                time.sleep(0.1)
-        except subprocess.CalledProcessError as e:
+                time.sleep(timeout)
+        except subprocess.SubprocessError as e:
             logger.error(f"Error playing {input_file}: {e}")
         finally:
             if self.playback_process:
@@ -161,7 +186,8 @@ class AudioInterface:
             output_dir = os.path.dirname(output_file)
             if not os.path.exists(output_dir):
                 logger.warning(
-                    f"Output directory does not exist: {output_dir}, attempting to create"
+                    "Output directory does not exist: %s, attempting to create",
+                    output_dir,
                 )
                 os.makedirs(output_dir, exist_ok=True)
 
@@ -235,7 +261,8 @@ class AudioInterface:
                             and os.path.getsize(output_file) > 0
                         ):
                             logger.info(
-                                f"Recording saved successfully: {output_file} ({os.path.getsize(output_file)} bytes)"
+                                f"Recording saved successfully: {output_file} "
+                                f"({os.path.getsize(output_file)} bytes)"
                             )
                         else:
                             logger.warning(
@@ -276,19 +303,29 @@ class AudioInterface:
                             and os.path.getsize(output_file) > 0
                         ):
                             logger.info(
-                                f"Recording saved successfully after forced termination: {output_file} ({os.path.getsize(output_file)} bytes)"
+                                "Recording saved successfully after forced termination: "
+                                "%s (%d bytes)",
+                                output_file,
+                                os.path.getsize(output_file),
                             )
                         else:
-                            logger.warning(
-                                f"Recording file not found or empty after forced termination: {output_file}"
+                            logger.info(
+                                "Recording file not found or empty after forced "
+                                "termination: %s",
+                                output_file,
                             )
                     except OSError as e:
                         logger.error(
-                            f"Error checking recording file after forced termination: {e}"
+                            "Error checking recording file after forced "
+                            "termination: %s",
+                            e,
                         )
 
             except (ProcessLookupError, subprocess.SubprocessError) as e:
-                logger.warning(f"Error while terminating recording process: {e}")
+                logger.warning(
+                    "Error while terminating recording process: %s",
+                    e,
+                )
 
             # Final cleanup - ensure all arecord processes are gone
             try:
