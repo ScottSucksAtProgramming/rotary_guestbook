@@ -110,10 +110,10 @@ Every public module, class, and function must include docstrings:
 ### 4. Logging & Error Handling Modules
 
 - **`src/rotary_guestbook/logger.py`**
-
-    - Configures a root logger with rotating file handler and console output.
-
-    - Log levels and format defined via config.
+    - Implements centralized logging setup for the application.
+    - Configures a root logger with both rotating file handler and console output.
+    - Driven by `ConfigManager` (level, format, file, rotation).
+    - Fully tested with 100% coverage and robust error handling.
 - **`src/rotary_guestbook/errors.py`**
 
     - Defines custom exceptions (e.g., `ConfigError`, `AudioError`, `HardwareError`).

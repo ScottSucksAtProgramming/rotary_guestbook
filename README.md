@@ -7,7 +7,7 @@ A production-grade rotary phone audio guestbook system that allows users to leav
 - Interactive audio experience with vintage rotary phone interface
 - Digital recording and storage of voice messages
 - Web interface for message playback and system status
-- Robust error handling and logging
+- Robust error handling and logging (centralized, configurable, and fully tested via `src/rotary_guestbook/logger.py` and driven by the configuration system)
 - Comprehensive testing coverage
 - Production-grade architecture following SOLID principles
 

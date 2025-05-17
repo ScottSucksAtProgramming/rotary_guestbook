@@ -69,21 +69,21 @@ For each module below, follow this pattern:
         *   [x] No linter or deprecation warnings
         *   [x] Example config file (`config.yaml.example`) updated to match new structure
     *   **Testing (`tests/unit/test_config.py`):**
-        *   [ ] Test loading valid and invalid config files.
-        *   [ ] Test default value handling.
-        *   [ ] Test access to different config sections and values.
-        *   [ ] Mock filesystem operations (`open`, `yaml.safe_load`).
+        *   [x] Test loading valid and invalid config files.
+        *   [x] Test default value handling.
+        *   [x] Test access to different config sections and values.
+        *   [x] Mock filesystem operations (`open`, `yaml.safe_load`).
 
 3.  **`src/rotary_guestbook/logger.py`:**
     *   **Goal:** Centralized logging setup.
     *   **Implementation:**
-        *   [ ] Function `setup_logging(config: ConfigManager)` that configures a root logger.
-        *   [ ] Use `logging.config.dictConfig` or manually configure handlers (console, rotating file).
-        *   [ ] Logging levels, format, and file paths should be driven by `ConfigManager`.
+        *   [x] Function `setup_logging(config: ConfigManager)` that configures a root logger.
+        *   [x] Use `logging.config.dictConfig` or manually configure handlers (console, rotating file).
+        *   [x] Logging levels, format, and file paths should be driven by `ConfigManager`.
     *   **Testing (`tests/unit/test_logger.py`):**
-        *   [ ] Test that `setup_logging` configures handlers and formatters as expected.
-        *   [ ] Verify log messages are written to the correct destinations (can use `unittest.mock.patch` on `logging` handlers or check for log file creation/content if simple).
-        *   [ ] Test different log levels.
+        *   [x] Test that `setup_logging` configures handlers and formatters as expected.
+        *   [x] Verify log messages are written to the correct destinations (can use `unittest.mock.patch` on `logging` handlers or check for log file creation/content if simple).
+        *   [x] Test different log levels.
 
 **Phase 2: Core Application Logic & Interfaces**
 
